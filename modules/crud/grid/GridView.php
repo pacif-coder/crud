@@ -7,22 +7,25 @@ use yii\grid\GridViewAsset as BaseGridViewAsset;
 use yii\helpers\Json;
 
 use app\modules\crud\grid\GridViewAsset;
+use app\modules\crud\grid\toolbar\GridToolbarButtonAsset;
 
 /**
  *
  *
  */
 class GridView extends BaseGridView {
-    public $layout = "{items}\r\n{summary}\r\n{pager}";
+    public $layout = "{toolbar}\r\n{items}\r\n{summary}\r\n{pager}";
 
-    public $addCheckboxColumn = false;
-    public $checkboxColumn = 'yii\grid\CheckboxColumn';
+    public $addCheckboxColumn = true;
+    public $checkboxColumn = 'app\modules\crud\grid\column\CheckboxColumn';
 
     public $addActionColumn = false;
     public $actionColumn = 'yii\grid\ActionColumn';
 
+    public $toolbar = 'app\modules\crud\grid\Toolbar';
     public $toolbarButtons = [
         'delete',
+        'clearFilter',
     ];
 
     protected function initColumns() {
@@ -101,6 +104,8 @@ class GridView extends BaseGridView {
         BaseGridViewAsset::register($view);
         GridViewAsset::register($view);
 
+        GridToolbarButtonAsset::register($view);
+
         $view->registerJs("jQuery('#$id').yiiGridView($options);");
 
         parent::run();
@@ -116,16 +121,10 @@ class GridView extends BaseGridView {
     }
 
     public function renderToolbar() {
-        $out = '';
-        foreach ($this->toolbarButtons as $button) {
-            if (is_string($button) && false === strpos($button, '/')) {
-                $button = ['class' => __NAMESPACE__ . '\toolbar\\' . ucfirst($button)];
-            }
+        $desc = is_string($this->toolbar)? ['class' => $this->toolbar] : $this->toolbar;
+        $desc['grid'] = $this;
+        $toolbar = Yii::createObject($desc);
 
-            $button = Yii::createObject($button);
-            $out .= $button->html();
-        }
-
-        return $out;
+        return $toolbar->render();
     }
 }

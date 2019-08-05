@@ -4,14 +4,14 @@ namespace app\modules\crud\controllers;
 use Yii;
 use yii\web\Controller;
 use yii\data\ActiveDataProvider;
-use yii\filters\AccessControl;
+use yii\web\NotFoundHttpException;
+use yii\base\InvalidConfigException;
 
 use app\modules\crud\behaviors\BackUrlBehavior;
 use app\modules\crud\grid\SearchModel;
+use app\modules\crud\builder\FormBuilder;
+use app\modules\crud\builder\GridBuilder;
 use app\modules\crud\helpers\ClassI18N;
-use app\modules\crud\models\ModelInspector;
-use app\modules\crud\builder\Form;
-
 
 /**
  * Default controller for the `admin` module
@@ -24,21 +24,11 @@ class DefaultController extends Controller {
     public $withFilter = false;
     public $filterInGrid = true;
     public $addCreateButton = true;
-    public $gridDefaultOrder = [];
+    public $gridDefaultOrder;
 
     public function behaviors() {
         $behaviors = parent::behaviors();
-
         $behaviors['backUrl'] = BackUrlBehavior::className();
-        $behaviors['access'] = [
-            'class' => AccessControl::className(),
-            'rules' => [
-                [
-                    'allow' => true,
-                    'roles' => ['?'],
-                ],
-            ],
-        ];
 
         return $behaviors;
     }
@@ -46,42 +36,72 @@ class DefaultController extends Controller {
     public function init() {
         parent::init();
 
+        if (!$this->modelClass) {
+            throw new InvalidConfigException('Not find model class');
+        }
+
         if (!$this->messageCategory && $this->modelClass) {
             $this->messageCategory = ClassI18N::class2messagesPath($this->modelClass);
         }
     }
 
     /**
-     * Renders the index view for the module
+     * Show model objects list
      * @return string
      */
     public function actionIndex() {
-        $class = $this->modelClass;
-        $query = $class::find();
-
-        // add conditions that should always apply here
-        $provider = new ActiveDataProvider([
-            'query' => $query,
-            'sort' => [
-                'defaultOrder' => $this->gridDefaultOrder,
-            ],
-        ]);
-
-        $inspector = $this->getInspector();
-        $inspector->forGrid($class);
-
         $view = $this->getView();
         $view->title = Yii::t($this->messageCategory, 'List items');
 
-        $filterModel = null;
-        if ($this->withFilter) {
-            $filterModel = new SearchModel();
-            $filterModel->setModel(Yii::createObject($class));
-            $filterModel->load(Yii::$app->request->get());
-            $filterModel->filter($query);
+        $query = $this->getGridQuery();
+        $filterModel = $this->getGridFilter($query);
+        $gridOptions = $this->getGridOptions($query, $filterModel);
+
+        return $this->render('index', compact(['gridOptions', 'filterModel']));
+    }
+
+    protected function getGridOptions($query, $filterModel) {
+        $builder = $this->getBuilder('grid');
+        $builder->build($this->modelClass);
+
+        return [
+            'dataProvider' => $this->getGridProvider($query, $builder),
+            'filterModel' => $this->filterInGrid && $filterModel ? $filterModel : null,
+            'showHeader' => true,
+            'columns' => $builder->columns,
+        ];
+    }
+
+    protected function getGridProvider($query, $builder) {
+        $options = [
+            'query' => $query,
+        ];
+
+        if (null !== $this->gridDefaultOrder) {
+            $options['sort']['defaultOrder'] = $this->gridDefaultOrder;
+        } elseif ($builder->nameAttr) {
+            $options['sort']['defaultOrder'] = [$builder->nameAttr => SORT_ASC];
         }
 
-        return $this->render('index', compact(['provider', 'inspector', 'filterModel']));
+        return new ActiveDataProvider($options);
+    }
+
+    protected function getGridFilter($query) {
+        if (!$this->withFilter) {
+            return;
+        }
+
+        $filterModel = new SearchModel();
+        $filterModel->setModel(Yii::createObject($this->modelClass));
+        $filterModel->load(Yii::$app->request->get());
+        $filterModel->filter($query);
+
+        return $filterModel;
+    }
+
+    protected function getGridQuery() {
+        $modelClass = $this->modelClass;
+        return $modelClass::find();
     }
 
     /**
@@ -94,7 +114,7 @@ class DefaultController extends Controller {
     }
 
     /**
-     * Updates an existing Subscribe model.
+     * Updates an existing model object.
      * If update is successful, the browser will be redirected to the 'index' page.
      * @param string $id
      * @return mixed
@@ -104,6 +124,12 @@ class DefaultController extends Controller {
         return $this->_actionEdit($id);
     }
 
+    /**
+     * Create and edit object nodel
+     * @param string $id
+     * @return mixed
+     * @throws NotFoundHttpException if the model cannot be found
+     */
     public function _actionEdit($id = null) {
         $model = $this->findModel($id);
 
@@ -131,14 +157,32 @@ class DefaultController extends Controller {
     }
 
     /**
-     * Deletes an existing Subscribe model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
+     * Deletes an existing model object.
+     * If deletion is successful, the browser will be redirected to the 'back' url.
      * @param string $id
      * @return mixed
-     * @throws NotFoundHttpException if the model cannot be found
      */
     public function actionDelete($id) {
-        $this->findModel($id)->delete();
+        $model = $this->findModel($id, false);
+        if ($model) {
+            $model->delete();
+        }
+
+        return $this->goBack();
+    }
+
+    /**
+     * Deletes an existing model objects.
+     * If deletion is successful, the browser will be redirected to the 'back' url.
+     * @return mixed
+     */
+    public function actionMassDelete() {
+        $modelClass = $this->modelClass;
+        $selection = Yii::$app->request->post('selection', []);
+
+        foreach ($modelClass::findAll($selection) as $model) {
+            $model->delete();
+        }
 
         return $this->goBack();
     }
@@ -146,10 +190,13 @@ class DefaultController extends Controller {
     protected function getBuilder($type) {
         switch ($type) {
             case 'form':
-                $builder = new Form();
+                $builder = new FormBuilder();
+                break;
+
+            case 'grid':
+                $builder = new GridBuilder();
                 break;
         }
-
         $builder->controller2this($this);
 
         return $builder;
@@ -160,24 +207,26 @@ class DefaultController extends Controller {
      *
      * If the model is not found, a 404 HTTP exception will be thrown.
      * @param string $id
-     * @return Subscribe the loaded model
+     * @return \yii\db\ActiveRecord the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function findModel($id = null) {
+    protected function findModel($id = null, $exception = true) {
+        $modelClass = $this->modelClass;
         if (null === $id) {
-            return Yii::createObject($this->modelClass);
+            return Yii::createObject($modelClass);
         }
 
-        $modelClass = $this->modelClass;
         $model = $modelClass::findOne($id);
         if (null !== $model) {
             return $model;
         }
 
-        throw new NotFoundHttpException('The requested model does not exist.');
+        if ($exception) {
+            throw new NotFoundHttpException('The requested model does not exist.');
+        }
     }
 
-   public function getViewPath() {
+    public function getViewPath() {
         $path = parent::getViewPath();
         $path = str_replace('/' . $this->module->id . '/', '/crud/', $path);
         return $path;

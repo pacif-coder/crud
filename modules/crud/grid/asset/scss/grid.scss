@@ -3,35 +3,46 @@
         display: none
     }
 
-	.table {
-		thead, tbody, tfoot {
-			tr {
-				th {
-					vertical-align: top;
-				}
+    .toolbar {
+        margin-bottom: 5px;
+        .half-width {
+            width: 50%;
+        }
 
-				th.no-wrap {
-					white-space: nowrap;
-				}
-			}
+        .btn + .btn {
+            margin-left: 5px;
+        }
+    }
 
-			tr.no_active {
-				opacity: 0.3;
-			}
+    .table {
+        thead, tbody, tfoot {
+            tr {
+                th {
+                    vertical-align: top;
+                }
 
-			& > tr.filters {
-				& > td, & > th {
-					padding: 4px;
+                th.no-wrap {
+                    white-space: nowrap;
+                }
+            }
 
-					.form-control {
-						padding-left: 4px;
-						padding-right: 4px;
-						height: 28px;
-					}
-				}
-			}
-		}
-	}
+            tr.no_active {
+                opacity: 0.3;
+            }
+
+            & > tr.filters {
+                & > td, & > th {
+                    padding: 4px;
+
+                    .form-control {
+                        padding-left: 4px;
+                        padding-right: 4px;
+                        height: 28px;
+                    }
+                }
+            }
+        }
+    }
 
     /* add sorting icons to gridview sort links */
     a.asc:after, a.desc:after {
@@ -81,10 +92,14 @@
         &-three {width: 60px;}
     }
 
-	.not-set {
-		color: #c55c55;
-		font-style: italic;
-	}
+    .checkbox-column {
+        width: 20px;
+    }
+
+    .not-set {
+        color: #c55c55;
+        font-style: italic;
+    }
 }
 
 .search-form {

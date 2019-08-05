@@ -5,12 +5,15 @@ use yii\db\ActiveRecord;
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
+use yii\validators\EmailValidator;
 
 /**
  * XXX
  *
  */
 class Base {
+    public $fields;
+
     public $enumFields;
     public $enumOptions;
     public $enumGetOptionsMethod;
@@ -23,6 +26,7 @@ class Base {
     public $nameAttrs = ['name', 'title', 'fio', 'id'];
 
     protected $dbColumns = [];
+    protected $validatorts;
 
     public function controller2this($controller) {
         $params1 = array_keys(get_object_vars($controller));
@@ -57,17 +61,34 @@ class Base {
         if ('datetime' == $column->dbType) {
             return 'datetime';
         }
+
+        if ('date' == $column->dbType) {
+            return 'date';
+        }
     }
-/*
-  +targetClass: "app\modules\admin\models\City"
-  +targetAttribute: array:1 [▶]
- */
+
+    protected function initValidators($model) {
+        if (null !== $this->validatorts) {
+            return;
+        }
+
+        $this->validatorts = [];
+        foreach ($model->getActiveValidators() as $validator) {
+            /*@var $validator \yii\validators\Validator */
+            foreach ($validator->getAttributeNames() as $attr) {
+                $this->validatorts[$attr][] = $validator;
+            }
+        }
+    }
+
     protected function getControlTypeByValidator($model, $attr) {
-        foreach ($model->getActiveValidators($attr) as $validator) {
+        $this->initValidators($model);
+        if (!isset($this->validatorts[$attr])) {
+            return;
+        }
+
+        foreach ($this->validatorts[$attr] as $validator) {
             if ($validator instanceof ExistValidator) {
-
-                $this->initEnumControlByExistValidator($validator, $attr);
-
                 return 'select';
             }
 
@@ -78,15 +99,31 @@ class Base {
             if ($validator instanceof FileValidator) {
                 return 'file';
             }
+
+            if ($validator instanceof EmailValidator) {
+                return 'email';
+            }
         }
     }
 
-    protected function initEnumControlByExistValidator($validator, $attr) {
-        if (in_array($attr, $this->enumFields)) {
+    protected function initEnumOptionsByValidator($model, $attr) {
+        $this->initValidators($model);
+        if (!isset($this->validatorts[$attr])) {
             return;
         }
 
-        $this->enumFields[] = $attr;
+        foreach ($this->validatorts[$attr] as $validator) {
+            if ($validator instanceof ExistValidator) {
+                $this->initEnumOptionsByExistValidator($validator, $attr);
+            }
+        }
+    }
+
+    protected function initEnumOptionsByExistValidator($validator, $attr) {
+        if (!in_array($attr, $this->enumFields)) {
+            $this->enumFields[] = $attr;
+        }
+
         if (isset($this->enumOptions[$attr])) {
             return;
         }

@@ -56,6 +56,11 @@ use yii\web\View;
                 echo $control->widget(\app\modules\crud\widgets\FileInput::className(), $options);
                 break;
 
+            case 'date':
+                echo $control->widget(\yii\jui\DatePicker::classname(), $options);
+                break;
+
+            case 'email':
             default:
                 echo $control->input('text', $options);
                 break;
