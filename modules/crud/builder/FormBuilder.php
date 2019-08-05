@@ -10,66 +10,68 @@ use app\modules\crud\builder\Base;
  * XXX
  *
  */
-class Form extends Base {
-    public $fields;
+class FormBuilder extends Base {
     public $fieldTypes;
     public $fieldOptions;
 
-    // Enum
-    public $enumFields;
-    public $enumOptions;
-    public $enumGetOptionsMethod;
-
     public function build(ActiveRecord $model) {
-        $class = get_class($model);
-
-        $this->dbColumns = $class::getTableSchema()->columns;
-        $keys = $class::primaryKey();
-        $activeAttributes = $model->activeAttributes();
-
         foreach (['fieldTypes', 'fieldOptions', 'fields', 'enumFields'] as $param) {
             if (null === $this->{$param}) {
                 $this->{$param} = [];
             }
         }
 
-        $attrs = $model->attributes();
-        $attrs = array_diff($attrs, $keys);
-        $attrs = array_diff($attrs, array_keys($this->fieldTypes));
-        $attrs = array_intersect($attrs, $activeAttributes);
+        $class = get_class($model);
+        $this->dbColumns = $class::getTableSchema()->columns;
+        $keys = $class::primaryKey();
 
+        $attrs = array_intersect($model->attributes(), $model->activeAttributes());
+        $attrs = array_diff($attrs, $keys);
         foreach ($attrs as $attr) {
-            $type = null;
             if (!in_array($attr, $this->fields)) {
                 $this->fields[] = $attr;
             }
             $this->uptakeNameAttr($attr);
 
-            if (null !== ($type = $this->getControlTypeByDBColumn($attr))) {
-                $this->fieldTypes[$attr] = $type;
+            $type = $this->getType($attr, $model);
+            if (!$type) {
                 continue;
             }
 
-            if (null !== ($type = $this->getControlTypeByValidator($model, $attr))) {
-                $this->fieldTypes[$attr] = $type;
-                continue;
+            $this->fieldTypes[$attr] = $type;
+            if ('radio' == $type || 'select' == $type) {
+                $this->initEnumOptionsByValidator($model, $attr);
             }
+        }
+    }
 
-            if (!$this->uptake) {
-                continue;
-            }
+    protected function getType($attr, $model) {
+        if (isset($this->fieldTypes[$attr])) {
+            return $this->fieldTypes[$attr];
+        }
 
-            if (in_array($attr, $this->phoneAttrs)) {
-                $type = 'phone';
-            }
+        if (null !== ($type = $this->getControlTypeByDBColumn($attr))) {
+            return $type;
+        }
 
-            if (in_array($attr, $this->emailAttrs)) {
-                $type = 'email';
-            }
+        if (null !== ($type = $this->getControlTypeByValidator($model, $attr))) {
+            return $type;
+        }
 
-            if ($type) {
-                $this->fieldTypes[$attr] = $type;
-            }
+        return $this->uptakeType($attr);
+    }
+
+    protected function uptakeType($attr) {
+        if (!$this->uptake) {
+            return;
+        }
+
+        if (in_array($attr, $this->phoneAttrs)) {
+            return 'phone';
+        }
+
+        if (in_array($attr, $this->emailAttrs)) {
+            return 'email';
         }
     }
 }

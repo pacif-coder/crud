@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\grid;
+namespace app\modules\crud\grid\column;
 
 use Yii;
 use yii\helpers\Html;
