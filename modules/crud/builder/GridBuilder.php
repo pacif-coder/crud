@@ -21,6 +21,10 @@ class GridBuilder extends Base {
     protected $_model = null;
 
     public function build($modelClass) {
+        if (null === $this->nameAttr && ($nameAttr = $this->getNameAttr($modelClass))) {
+            $this->nameAttr = $nameAttr;
+        }
+
         $this->dbColumns = $modelClass::getTableSchema()->columns;
 
         if (null === $this->columns) {
@@ -33,6 +37,9 @@ class GridBuilder extends Base {
             foreach ($this->columns as $column => $desc) {
                 if (is_string($desc)) {
                     $columns[$desc] = $this->parseColumnDesc($desc);
+                } elseif (!isset($desc['attribute']) && !is_int($column)) {
+                    $desc['attribute'] = $column;
+                    $columns[$column] = $desc;
                 } else {
                     $columns[$column] = $desc;
                 }

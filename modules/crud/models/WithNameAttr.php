@@ -6,5 +6,7 @@ namespace app\modules\crud\models;
  *
  */
 interface WithNameAttr {
-
+    /**
+     * const NAME_ATTR = 'name';
+     */
 }

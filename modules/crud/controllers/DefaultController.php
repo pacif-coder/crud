@@ -26,6 +26,8 @@ class DefaultController extends Controller {
     public $addCreateButton = true;
     public $gridDefaultOrder;
 
+    protected $_useCrudViewPath = true;
+
     public function behaviors() {
         $behaviors = parent::behaviors();
         $behaviors['backUrl'] = BackUrlBehavior::className();
@@ -60,7 +62,7 @@ class DefaultController extends Controller {
         return $this->render('index', compact(['gridOptions', 'filterModel']));
     }
 
-    protected function getGridOptions($query, $filterModel) {
+    protected function getGridOptions($query, $filterModel = null) {
         $builder = $this->getBuilder('grid');
         $builder->build($this->modelClass);
 
@@ -106,7 +108,7 @@ class DefaultController extends Controller {
 
     /**
      * Creates a new model.
-     * If creation is successful, the browser will be redirected to the 'index' page.
+     * If creation is successful, the browser will be redirected to the 'back' url page.
      * @return mixed
      */
     public function actionCreate() {
@@ -115,7 +117,7 @@ class DefaultController extends Controller {
 
     /**
      * Updates an existing model object.
-     * If update is successful, the browser will be redirected to the 'index' page.
+     * If update is successful, the browser will be redirected to the 'back' url page.
      * @param string $id
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
@@ -228,6 +230,10 @@ class DefaultController extends Controller {
 
     public function getViewPath() {
         $path = parent::getViewPath();
+        if (!$this->_useCrudViewPath) {
+            return $path;
+        }
+
         $path = str_replace('/' . $this->module->id . '/', '/crud/', $path);
         return $path;
     }

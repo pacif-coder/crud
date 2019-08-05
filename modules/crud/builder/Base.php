@@ -7,6 +7,8 @@ use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
 use yii\validators\EmailValidator;
 
+use app\modules\crud\models\WithNameAttr;
+
 /**
  * XXX
  *
@@ -34,6 +36,15 @@ class Base {
         foreach (array_intersect($params1, $params2) as $param) {
             $this->{$param} = $controller->{$param};
         }
+    }
+
+    protected function getNameAttr($modelClass) {
+        if (!is_a($modelClass, 'app\modules\crud\models\WithNameAttr', true)) {
+            return null;
+        }
+
+        // dump(defined("{$modelClass}::NAME_ATTR"));
+        return $modelClass::NAME_ATTR;
     }
 
     protected function uptakeNameAttr($attr) {

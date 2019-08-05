@@ -9,10 +9,6 @@ use yii\web\AssetBundle;
 class GridViewAsset extends AssetBundle {
     public $sourcePath = __DIR__ . '/asset';
 
-    public $js = [
-        // 'js/grid-button.js',
-    ];
-
     public $css = [
         'css/grid.css',
     ];

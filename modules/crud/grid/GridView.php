@@ -4,10 +4,12 @@ namespace app\modules\crud\grid;
 use Yii;
 use yii\grid\GridView as BaseGridView;
 use yii\grid\GridViewAsset as BaseGridViewAsset;
+use yii\widgets\BaseListView;
 use yii\helpers\Json;
 
 use app\modules\crud\grid\GridViewAsset;
 use app\modules\crud\grid\toolbar\GridToolbarButtonAsset;
+
 
 /**
  *
@@ -23,10 +25,11 @@ class GridView extends BaseGridView {
     public $actionColumn = 'yii\grid\ActionColumn';
 
     public $toolbar = 'app\modules\crud\grid\Toolbar';
-    public $toolbarButtons = [
+    public $baseToolbarButtons = [
         'delete',
         'clearFilter',
     ];
+    public $addToolbarButtons = [];
 
     protected function initColumns() {
         $isGuessColumn = empty($this->columns);
@@ -97,18 +100,19 @@ class GridView extends BaseGridView {
      * Runs the widget.
      */
     public function run() {
-        $id = $this->options['id'];
-        $options = Json::htmlEncode($this->getClientOptions());
-
         $view = $this->getView();
         BaseGridViewAsset::register($view);
         GridViewAsset::register($view);
 
-        GridToolbarButtonAsset::register($view);
+        if ($this->baseToolbarButtons || $this->addToolbarButtons) {
+            GridToolbarButtonAsset::register($view);
+        }
 
+        BaseListView::run();
+
+        $id = $this->options['id'];
+        $options = Json::htmlEncode($this->getClientOptions());
         $view->registerJs("jQuery('#$id').yiiGridView($options);");
-
-        parent::run();
     }
 
     public function renderSection($name) {

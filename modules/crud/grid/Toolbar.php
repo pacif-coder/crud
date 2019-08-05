@@ -13,7 +13,8 @@ class Toolbar {
     public function render() {
         $left = $right = '';
 
-        foreach ($this->grid->toolbarButtons as $button) {
+        $buttons = array_merge($this->grid->baseToolbarButtons, $this->grid->addToolbarButtons);
+        foreach ($buttons as $button) {
             if (is_string($button)) {
                 if (false === strpos($button, '\\')) {
                     $button = ['class' => __NAMESPACE__ . '\toolbar\\' . ucfirst($button)];
