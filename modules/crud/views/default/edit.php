@@ -26,8 +26,10 @@ use yii\web\View;
         $options = isset($builder->fieldOptions[$field])? $builder->fieldOptions[$field] : [];
 
         switch ($fieldType) {
-            case 'select':
-                echo $control->dropDownList($builder->enumOptions[$field], $options);
+            case 'dropDownList':
+            case 'checkboxList':
+            case 'radioList':
+                echo $control->{$fieldType}($builder->enumOptions[$field], $options);
                 break;
 
             case 'textarea':
@@ -70,6 +72,7 @@ use yii\web\View;
     <hr>
     <div class="form-group">
         <div class="col-xs-12 text-right">
+            <?= Html::a(Html::icon('triangle-left') . ' Отменить', $this->context->getBackUrl(), ['class' => 'btn  btn-info']) ?>
             <?= Html::submitButton(Html::icon('ok') . ' Сохранить', ['class' => 'btn  btn-success']) ?>
         </div>
     </div>
