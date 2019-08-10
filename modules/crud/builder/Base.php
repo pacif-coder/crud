@@ -18,7 +18,6 @@ class Base {
 
     public $enumFields;
     public $enumOptions;
-    public $enumGetOptionsMethod;
 
     public $uptake = true;
     public $nameAttr = null;
@@ -29,6 +28,7 @@ class Base {
 
     protected $dbColumns = [];
     protected $validatorts;
+    protected $enumFieldTypes = ['dropDownList', 'radioList', 'checkboxList'];
 
     public function controller2this($controller) {
         $params1 = array_keys(get_object_vars($controller));
@@ -100,7 +100,7 @@ class Base {
 
         foreach ($this->validatorts[$attr] as $validator) {
             if ($validator instanceof ExistValidator) {
-                return 'select';
+                return 'dropDownList';
             }
 
             if ($validator instanceof BooleanValidator) {
