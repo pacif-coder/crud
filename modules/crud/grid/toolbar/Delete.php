@@ -12,14 +12,17 @@ use yii\web\Request;
  *
  */
 class Delete extends SendFormButton {
-    public $action = ['mass-delete'];
+    public $action = 'delete';
     public $label = 'Delete';
     public $colorClass = 'btn-danger';
     public $icon = 'remove';
+    public $order = -1;
+    public $messageCategory = 'yii';
 
     public function getAttrs() {
         $attrs = parent::getAttrs();
-        $attrs['data-confirm-message'] = Yii::t('yii', 'Are you sure you want to delete this item?');
+        $attrs['data-confirm-message'] = Yii::t($this->messageCategory, 'Are you sure you want to delete this item?');
+
         return $attrs;
     }
 }
