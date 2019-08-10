@@ -24,8 +24,8 @@ $(document).ready(function () {
             form.append($('<input/>').attr({type: 'hidden', name: name, value: value}));
         });
 
-        var csrfParam = $(this).data('csrfParam');
-        var csrfToken = $(this).data('csrfToken');
+        var csrfParam = window.yii.getCsrfParam();
+        var csrfToken = window.yii.getCsrfToken();
         if (csrfParam && csrfToken) {
             form.append($('<input/>').attr({'type': 'hidden', 'name': csrfParam, 'value': csrfToken}));
         }
