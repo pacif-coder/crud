@@ -4,6 +4,8 @@ namespace app\modules\crud\builder;
 use yii\db\ActiveRecord;
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
+use yii\base\InvalidConfigException;
+
 use app\modules\crud\builder\Base;
 
 /**
@@ -15,7 +17,7 @@ class FormBuilder extends Base {
     public $fieldOptions;
 
     public function build(ActiveRecord $model) {
-        foreach (['fieldTypes', 'fieldOptions', 'fields', 'enumFields'] as $param) {
+        foreach (['fieldTypes', 'fieldOptions', 'enumFields'] as $param) {
             if (null === $this->{$param}) {
                 $this->{$param} = [];
             }
@@ -25,24 +27,54 @@ class FormBuilder extends Base {
         $this->dbColumns = $class::getTableSchema()->columns;
         $keys = $class::primaryKey();
 
-        $attrs = array_intersect($model->attributes(), $model->activeAttributes());
-        $attrs = array_diff($attrs, $keys);
-        foreach ($attrs as $attr) {
-            if (!in_array($attr, $this->fields)) {
-                $this->fields[] = $attr;
+        if (null === $this->fields) {
+            $attrs = array_intersect($model->attributes(), $model->activeAttributes());
+            $this->fields = array_diff($attrs, $keys);
+        } else {
+            $notExistRules = array_diff($this->fields, $model->activeAttributes());
+            if ($notExistRules) {
+                throw new InvalidConfigException('No exist rules '
+                        . 'on "' . implode('", "', $notExistRules) . '" fields');
             }
-            $this->uptakeNameAttr($attr);
+        }
 
-            $type = $this->getType($attr, $model);
+        foreach ($this->fields as $field) {
+            $type = $this->getType($field, $model);
             if (!$type) {
                 continue;
             }
 
-            $this->fieldTypes[$attr] = $type;
-            if ('radio' == $type || 'select' == $type) {
-                $this->initEnumOptionsByValidator($model, $attr);
+            $this->fieldTypes[$field] = $type;
+            if (in_array($type, $this->enumFieldTypes) || in_array($field, $this->enumFields)) {
+                $this->initEnumOptions($model, $field);
             }
         }
+
+        if (!$this->uptake || $this->nameAttr || false === $this->nameAttr) {
+            return;
+        }
+
+        $nameAttrs = array_intersect($this->nameAttrs, $this->fields);
+        if ($nameAttrs) {
+            $this->nameAttr = reset($nameAttrs);
+        }
+    }
+
+    protected function initEnumOptions($model, $attr) {
+        if (isset($this->enumOptions[$attr])) {
+            $options = $this->enumOptions[$attr];
+            if (is_string($options)) {
+                $options = [$model, $options];
+            }
+
+            if (is_callable($options)) {
+                return $this->enumOptions[$attr] = call_user_func($options);
+            }
+
+            return;
+        }
+
+        $this->initEnumOptionsByValidator($model, $attr);
     }
 
     protected function getType($attr, $model) {
