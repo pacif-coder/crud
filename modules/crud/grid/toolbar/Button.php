@@ -28,6 +28,8 @@ class Button extends \yii\base\BaseObject {
 
     public $messageCategory;
 
+    public $order;
+
     public $options = [];
 
     public function init() {
@@ -63,20 +65,5 @@ class Button extends \yii\base\BaseObject {
         }
 
         return $attrs;
-    }
-
-    public function addCsrf(&$attrs) {
-        $request = Yii::$app->getRequest();
-        if (!($request instanceof Request)) {
-            return;
-        }
-
-        $csrf = ArrayHelper::remove($this->options, 'csrf', true);
-        if (!$csrf || !$request->enableCsrfValidation) {
-            return;
-        }
-
-        $attrs['data-csrf-param'] = $request->csrfParam;
-        $attrs['data-csrf-token'] = $request->getCsrfToken();
     }
 }
