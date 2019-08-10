@@ -18,7 +18,7 @@ use app\modules\crud\grid\toolbar\GridToolbarButtonAsset;
 class GridView extends BaseGridView {
     public $layout = "{toolbar}\r\n{items}\r\n{summary}\r\n{pager}";
 
-    public $addCheckboxColumn = true;
+    public $addCheckboxColumn;
     public $checkboxColumn = 'app\modules\crud\grid\column\CheckboxColumn';
 
     public $addActionColumn = false;
@@ -30,11 +30,20 @@ class GridView extends BaseGridView {
         'clearFilter',
     ];
     public $addToolbarButtons = [];
+    public $removeToolbarButtons = [];
 
     protected function initColumns() {
         $isGuessColumn = empty($this->columns);
 
-        if ($this->addCheckboxColumn) {
+        $addCheckboxColumn = $this->addCheckboxColumn;
+        // If there is no direct order to add or not a column with checkbox, add it
+        // yourself, if there are buttons working with this column
+        if (null === $addCheckboxColumn) {
+            $this->createToolbar();
+            $addCheckboxColumn = $this->toolbar->isNeedCheckboxColumn();
+        }
+
+        if ($addCheckboxColumn) {
             if (is_string($this->checkboxColumn)) {
                 $checkboxColumn = ['class' => $this->checkboxColumn];
             } else {
@@ -125,10 +134,19 @@ class GridView extends BaseGridView {
     }
 
     public function renderToolbar() {
+        $this->createToolbar();
+
+        return $this->toolbar->render();
+    }
+
+    protected function createToolbar() {
+        if (is_object($this->toolbar)) {
+            return;
+        }
+
         $desc = is_string($this->toolbar)? ['class' => $this->toolbar] : $this->toolbar;
         $desc['grid'] = $this;
-        $toolbar = Yii::createObject($desc);
 
-        return $toolbar->render();
+        $this->toolbar = Yii::createObject($desc);
     }
 }
