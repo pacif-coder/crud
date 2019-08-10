@@ -17,6 +17,8 @@ class ClearFilter extends Button {
 
     public $align = 'right';
 
+    public $order = -1;
+
     public function html() {
         if (!$this->grid || !$this->grid->filterModel || !$this->grid->filterModel->isLoaded()) {
             return '';
