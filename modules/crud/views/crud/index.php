@@ -4,8 +4,11 @@ use yii\bootstrap\Html;
 use app\modules\crud\grid\GridView;
 use yii\web\View;
 
+use app\modules\crud\behaviors\BackUrlBehavior;
+
 /* @var $this yii\web\View */
 /* @var $grid app\modules\crud\grid\GridView */
+/* @var $builder app\modules\crud\builder\GridBuilder */
 ?>
 <div>
     <h1 class="main-title clearfix">
@@ -13,13 +16,15 @@ use yii\web\View;
         <div class="pull-right">
             <?php
             if ($this->context->addCreateButton) {
-                echo Html::a(Yii::t($this->context->messageCategory, 'Create item'), ['create'], ['class' => 'btn btn-success']);
+                $url = ['create'];
+                $url = BackUrlBehavior::addBackUrl($url);
+                echo Html::a(Yii::t($this->context->messageCategory, 'Create item'), $url, ['class' => 'btn btn-success']);
             }
             ?>
         </div>
     </h1>
     <?php
-        $grid = GridView::begin($gridOptions);
+        $grid = GridView::begin($builder->getOptions());
         GridView::end();
     ?>
 </div>
