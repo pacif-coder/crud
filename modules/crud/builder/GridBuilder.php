@@ -1,11 +1,14 @@
 <?php
 namespace app\modules\crud\builder;
 
-use yii\db\ActiveRecord;
-use yii\validators\BooleanValidator;
-use yii\validators\FileValidator;
+use Yii;
+use yii\data\ActiveDataProvider;
+use yii\base\Event;
+
 use app\modules\crud\builder\Base;
 use app\modules\crud\grid\column\ActionLinkColumn;
+use app\modules\crud\grid\FilterModel;
+use yii\validators\ExistValidator;
 
 /**
  * XXX
@@ -14,46 +17,220 @@ use app\modules\crud\grid\column\ActionLinkColumn;
 class GridBuilder extends Base {
     public $columns;
     public $columnFormats;
-    public $skipColumnsInGrid;
 
+    public $gridDefaultOrder;
     public $gridWithEditLink = true;
 
-    protected $_model = null;
+    public $addToolbarButtons = [];
+    public $removeToolbarButtons = [];
+    public $toolbarButtonOptions = [];
 
-    public function build($modelClass) {
-        if (null === $this->nameAttr && ($nameAttr = $this->getNameAttr($modelClass))) {
-            $this->nameAttr = $nameAttr;
+    public $withFilter = false;
+    public $filterInGrid = true;
+    public $filterAttrs;
+    public $addFilterAttrs = [];
+    public $removeFilterAttrs = [];
+    public $filterAttrOperator = [];
+    public $filterOnlyIndexed = true;
+    public $noApplyAttrs = [];
+
+    public $autoJoin = true;
+
+    /**
+     * @event Event
+     */
+    const EVENT_BEFORE_FILTER_APPLY = 'beforeFilterApply';
+
+    protected $query;
+    protected $provider;
+    protected $gridOptions;
+    protected $filterModel;
+
+    protected $_model;
+    protected $_transformSortAttrMap = [];
+    protected $_transformFilterAttrMap = [];
+
+    public function controller2this($controller) {
+        if (isset($controller->modelClass)) {
+            $this->setModelClass($controller->modelClass);
         }
 
-        $this->dbColumns = $modelClass::getTableSchema()->columns;
+        $this->object2this($controller);
+    }
+
+    public function setModelClass($modelClass) {
+        $this->modelClass = $modelClass;
+
+        $this->static2this($modelClass, 'fb_');
+    }
+
+    public function build($modelClass = null) {
+        $this->_transformSortAttrMap = $this->_transformFilterAttrMap = [];
+
+        if ($modelClass && $modelClass != $this->modelClass) {
+            $this->setModelClass($modelClass);
+        }
+
+        $this->beforeBuild();
+        $this->initNameAttr();
 
         if (null === $this->columns) {
             $this->columns = [];
-            foreach ($this->getDefaultColumns($modelClass) as $column) {
+            foreach ($this->getDefaultColumns($this->modelClass) as $column) {
                 $this->columns[$column] = ['attribute' => $column];
             }
         } else {
-            $columns = [];
-            foreach ($this->columns as $column => $desc) {
-                if (is_string($desc)) {
-                    $columns[$desc] = $this->parseColumnDesc($desc);
-                } elseif (!isset($desc['attribute']) && !is_int($column)) {
-                    $desc['attribute'] = $column;
-                    $columns[$column] = $desc;
-                } else {
-                    $columns[$column] = $desc;
-                }
-            }
-
-            $this->columns = $columns;
+            $this->columns = $this->parseColumns($this->columns);
         }
 
-        $model = null;
+        $this->autoJoin();
+        $this->selectInFilter();
+
+        $dbColumns = $this->getDBColumns($this->modelClass);
+        foreach ($this->columns as $desc) {
+            $attr = isset($desc['attribute'])? $desc['attribute'] : null;
+            if (null === $attr) {
+                continue;
+            }
+
+            if (!isset($dbColumns[$attr])) {
+                continue;
+            }
+
+            /* @var $column \yii\db\ColumnSchema */
+            $column = $dbColumns[$attr];
+            switch ($column->type) {
+                case 'char':
+                case 'string':
+                case 'text':
+                    $this->filterAttrOperator[$attr] = 'like';
+                    break;
+            }
+        }
+
+        $this->createFilter();
         foreach ($this->columns as $column => $desc) {
             if (isset($desc['format'])) {
                 continue;
             }
 
+            $attr = isset($desc['attribute'])? $desc['attribute'] : null;
+            if (null === $attr) {
+                continue;
+            }
+
+            $format = $this->getColumnFormat($attr, $this->modelClass);
+            if (null !== $format) {
+                $this->columns[$column]['format'] = $format;
+            }
+        }
+
+        if ($this->gridWithEditLink && $this->nameAttr) {
+            $this->makeGridEditLink();
+        }
+
+        $this->fixSort();
+
+        $this->filterApply();
+
+        $this->afterBuild();
+    }
+
+    protected function filterApply() {
+        if (!$this->filterModel) {
+            return;
+        }
+
+        $this->filterModel->transformAttrMap = $this->_transformFilterAttrMap;
+        $this->beforeFilterApply();
+
+        $query = $this->getQuery();
+        $this->filterModel->filter($query);
+    }
+
+    public function getFilter() {
+        return $this->filterModel;
+    }
+
+    protected function createFilter() {
+        if (!$this->withFilter) {
+            return;
+        }
+
+        $this->filterModel = new FilterModel();
+        $this->filterModel->builder2this($this);
+        $this->filterModel->setModel(Yii::createObject($this->modelClass));
+        $this->filterModel->load(Yii::$app->request->get());
+    }
+
+    protected function getProvider() {
+        if (null !== $this->provider) {
+            return $this->provider;
+        }
+
+        $options = [
+            'query' => $this->getQuery(),
+        ];
+
+        if (null !== $this->gridDefaultOrder) {
+            $options['sort']['defaultOrder'] = $this->gridDefaultOrder;
+        } elseif ($this->nameAttr) {
+            $options['sort']['defaultOrder'] = [$this->nameAttr => SORT_ASC];
+        }
+
+        return $this->provider = new ActiveDataProvider($options);
+    }
+
+    protected function fixSort() {
+        if (!$this->_transformSortAttrMap) {
+            return;
+        }
+
+        $provider = $this->getProvider();
+        $sort = $provider->getSort();
+
+        foreach ($this->_transformSortAttrMap as $attr => $fix) {
+            if (!isset($sort->attributes[$attr])) {
+                continue;
+            }
+
+            $sort->attributes[$attr]['asc'] = [$fix => SORT_ASC];
+            $sort->attributes[$attr]['desc'] = [$fix => SORT_DESC];
+        }
+    }
+
+    public function &getOptions() {
+        if (null !== $this->gridOptions) {
+            return $this->gridOptions;
+        }
+
+        $this->gridOptions = [
+            'showHeader' => true,
+            'columns' => $this->columns,
+            'addToolbarButtons' => $this->addToolbarButtons,
+            'removeToolbarButtons' => $this->removeToolbarButtons,
+            'toolbarButtonOptions' => $this->toolbarButtonOptions,
+            'dataProvider' => $this->getProvider(),
+        ];
+
+        if ($this->filterModel && $this->filterInGrid) {
+            $this->gridOptions['filterModel'] = $this->filterModel;
+        }
+
+        return $this->gridOptions;
+    }
+
+    public function getQuery() {
+        if ($this->query) {
+            return $this->query;
+        }
+
+        $modelClass = $this->modelClass;
+        return $this->query = $modelClass::find();
+    }
+
+    protected function selectInFilter() {
+        foreach ($this->columns as $column => $desc) {
             $attr = null;
             if (is_array($desc) && isset($desc['attribute'])) {
                 $attr = $desc['attribute'];
@@ -63,19 +240,95 @@ class GridBuilder extends Base {
                 continue;
             }
 
-            $this->uptakeNameAttr($attr);
-
-            $format = $this->getColumnFormat($attr, $modelClass);
-            if (null === $format) {
+            if (is_array($desc) && isset($desc['filter']) && !$desc['filter']) {
                 continue;
             }
 
-            $desc['format'] = $format;
-            $this->columns[$column] = $desc;
+            if (!$this->_model) {
+                $this->_model = new $this->modelClass();
+                $this->initValidators($this->_model);
+            }
+
+            if (!isset($this->validatorts[$attr])) {
+                continue;
+            }
+
+            foreach ($this->validatorts[$attr] as $validator) {
+                if ($validator instanceof ExistValidator) {
+                    $desc['filter'] = [];
+                    $this->addEnumOptionsByExistValidator($desc['filter'], $validator, $attr);
+                    $this->columns[$column] = $desc;
+                }
+            }
+        }
+    }
+
+    protected function autoJoin() {
+        if (!$this->autoJoin) {
+            return;
         }
 
-        if ($this->gridWithEditLink && $this->nameAttr) {
-            $this->makeGridEditLink();
+        foreach ($this->columns as $desc) {
+            $attr = null;
+            if (is_array($desc) && isset($desc['attribute'])) {
+                $attr = $desc['attribute'];
+            }
+
+            if (null === $attr) {
+                continue;
+            }
+
+            if (!$this->_model) {
+                $this->_model = new $this->modelClass();
+                $this->initValidators($this->_model);
+            }
+
+            if (!isset($this->validatorts[$attr])) {
+                continue;
+            }
+
+            foreach ($this->validatorts[$attr] as $validator) {
+                if ($validator instanceof ExistValidator) {
+                    $this->linkQueryByExistValidator($validator, $attr);
+                }
+            }
+        }
+    }
+
+    protected function linkQueryByExistValidator($validator, $attr) {
+        /* @var $validator ExistValidator */
+        $targetModelClass = $validator->targetClass;
+        $nameAttr = $this->getNameAttr($targetModelClass);
+
+        if (!$nameAttr) {
+            return;
+        }
+
+        /* @var $query \yii\db\ActiveQuery */
+        $query = $this->getQuery();
+
+        $joinToTable = $targetModelClass::tableName();
+        $table = $query->modelClass::tableName();
+        $joinAttr = $validator->targetAttribute[$attr];
+        $on = "{$joinToTable}.[[{$joinAttr}]] = {$table}.[[{$attr}]]";
+
+        $query->join('left join', $joinToTable, $on);
+        if (!$query->select) {
+            $query->addSelect("{$table}.*");
+        }
+
+        $query->addSelect("{$joinToTable}.[[{$nameAttr}]] as [[{$attr}]]");
+        $this->_transformSortAttrMap[$attr] = "{$joinToTable}.[[{$nameAttr}]]";
+
+        $joinTableAttrs = array_keys($this->getDBColumns($targetModelClass));
+        $tableAttrs = array_keys($this->getDBColumns($this->modelClass));
+        $intersect = array_intersect($joinTableAttrs, $tableAttrs);
+        if (!$intersect) {
+            return;
+        }
+
+        foreach ($intersect as $attr) {
+            $this->_transformFilterAttrMap[$attr] = "{$table}.[[{$attr}]]";
         }
     }
 
@@ -96,8 +349,9 @@ class GridBuilder extends Base {
                 break;
         }
 
-        if (isset($this->dbColumns[$attr])) {
-            $column = $this->dbColumns[$attr];
+        $dbColumns = $this->getDBColumns($modelClass);
+        if (isset($dbColumns[$attr])) {
+            $column = $dbColumns[$attr];
 
             /**@var $column \yii\db\ColumnSchema  **/
             if ('text' == $column->dbType) {
@@ -106,18 +360,6 @@ class GridBuilder extends Base {
         }
 
         return 'text';
-    }
-
-    protected function parseColumnDesc($text) {
-        if (!preg_match('/^([^:]+)(:(\w*))?(:(.*))?$/', $text, $matches)) {
-            throw new InvalidConfigException('The column must be specified in the format of "attribute", "attribute:format" or "attribute:format:label"');
-        }
-
-        return [
-            'attribute' => $matches[1],
-            'format' => isset($matches[3]) ? $matches[3] : null,
-            'label' => isset($matches[5]) ? $matches[5] : null,
-        ];
     }
 
     protected function makeGridEditLink() {
@@ -158,16 +400,11 @@ class GridBuilder extends Base {
     }
 
     protected function getDefaultColumns($modelClass) {
-        if (null === $this->skipColumnsInGrid) {
-            $this->skipColumnsInGrid = [];
-        }
+        return $this->_getDefaultColumns($modelClass, $this->fields, $this->skipColumnsInGrid);
+    }
 
-        if ($this->fields) {
-            return array_diff($this->fields, $this->skipColumnsInGrid);
-        }
-
-        $keys = $modelClass::primaryKey();
-        $columns = array_keys($this->dbColumns);
-        return array_diff($columns, $keys, $this->skipColumnsInGrid);
+    protected function beforeFilterApply() {
+        $event = new Event();
+        $this->trigger(self::EVENT_BEFORE_FILTER_APPLY, $event);
     }
 }
