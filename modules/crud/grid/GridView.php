@@ -31,6 +31,7 @@ class GridView extends BaseGridView {
     ];
     public $addToolbarButtons = [];
     public $removeToolbarButtons = [];
+    public $toolbarButtonOptions = [];
 
     protected function initColumns() {
         $isGuessColumn = empty($this->columns);

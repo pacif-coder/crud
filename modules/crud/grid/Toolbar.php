@@ -77,7 +77,13 @@ class Toolbar {
         }
 
         foreach ($buttons as $button) {
+            $options = null;
             if (is_string($button)) {
+
+                if (is_array($this->grid->toolbarButtonOptions) && isset($this->grid->toolbarButtonOptions[$button])) {
+                    $options = $this->grid->toolbarButtonOptions[$button];
+                }
+
                 // if the button name does not contain slashes - this is the internal button
                 if (false === strpos($button, '\\')) {
                     $button = ['class' => __NAMESPACE__ . '\toolbar\\' . ucfirst($button)];
@@ -85,6 +91,11 @@ class Toolbar {
                     $button = ['class' => $button];
                 }
             }
+
+            if (null !== $options) {
+                $button = array_merge($button, $options);
+            }
+
             $button['grid'] = $this->grid;
 
             $this->buttons[] = Yii::createObject($button);
