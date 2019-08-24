@@ -34,7 +34,6 @@ use yii\base\Controller;
  * ```
  */
 class BackUrlBehavior extends Behavior {
-
     const BACK_URL_PARAM = 'back-url';
 
     public function getBackUrl() {
@@ -58,6 +57,11 @@ class BackUrlBehavior extends Behavior {
         if (null !== $stack) {
             return $stack['prev'];
         }
+    }
+
+    public static function addBackUrl($urlTo) {
+        $urlTo[self::BACK_URL_PARAM] = Yii::$app->request->getUrl();
+        return $urlTo;
     }
 
     public function events() {
