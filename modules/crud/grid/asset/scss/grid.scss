@@ -5,14 +5,17 @@
 
     .toolbar {
         margin-bottom: 5px;
+
         .half-width {
             width: 50%;
         }
-
-        .btn + .btn {
-            margin-left: 5px;
-        }
     }
+
+	.toolbar > div > {
+		.btn + .btn, .btn + span, span + .btn, span + span {
+			margin-left: 5px;
+		}
+	}
 
     .table {
         thead, tbody, tfoot {
