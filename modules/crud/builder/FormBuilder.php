@@ -16,6 +16,17 @@ class FormBuilder extends Base {
     public $fieldTypes;
     public $fieldOptions;
 
+    public $fieldSet2fields;
+    public $fieldSetLabels = [];
+
+    public function controller2this($controller) {
+        if (isset($controller->modelClass)) {
+            $this->static2this($controller->modelClass, 'fb_');
+        }
+
+        $this->object2this($controller);
+    }
+
     public function build(ActiveRecord $model) {
         foreach (['fieldTypes', 'fieldOptions', 'enumFields'] as $param) {
             if (null === $this->{$param}) {
@@ -23,18 +34,26 @@ class FormBuilder extends Base {
             }
         }
 
-        $class = get_class($model);
-        $this->dbColumns = $class::getTableSchema()->columns;
-        $keys = $class::primaryKey();
+        $this->modelClass = get_class($model);
+
+        $this->beforeBuild();
+        $this->initNameAttr();
+
+        $allows = $model->activeAttributes();
+        foreach ($this->fieldTypes as $attr => $type) {
+            if ('static' == $type || 'staticControl' == $type) {
+                $allows[] = $attr;
+            }
+        }
 
         if (null === $this->fields) {
-            $attrs = array_intersect($model->attributes(), $model->activeAttributes());
-            $this->fields = array_diff($attrs, $keys);
+            $attrs = array_intersect($model->attributes(), $allows);
+            $this->fields = array_diff($attrs, $this->modelClass::primaryKey());
         } else {
-            $notExistRules = array_diff($this->fields, $model->activeAttributes());
-            if ($notExistRules) {
-                throw new InvalidConfigException('No exist rules '
-                        . 'on "' . implode('", "', $notExistRules) . '" fields');
+            $notRule = array_diff($this->fields, $allows);
+            if ($notRule) {
+                $notRule = implode("', '", $notRule);
+                throw new InvalidConfigException("No exist rules on '{$notRule}' fields");
             }
         }
 
@@ -50,14 +69,7 @@ class FormBuilder extends Base {
             }
         }
 
-        if (!$this->uptake || $this->nameAttr || false === $this->nameAttr) {
-            return;
-        }
-
-        $nameAttrs = array_intersect($this->nameAttrs, $this->fields);
-        if ($nameAttrs) {
-            $this->nameAttr = reset($nameAttrs);
-        }
+        $this->afterBuild();
     }
 
     protected function initEnumOptions($model, $attr) {
