@@ -53,6 +53,19 @@ class ActionLinkColumn extends DataColumn {
     public $urlCreator;
 
     /**
+     * @var callable a callback that creates
+
+     *
+     * ```php
+     * function (string $action, mixed $model, mixed $key, integer $index, ActionColumn $this) {
+     *     //return string;
+     * }
+     * ```
+     *
+     */
+    public $checkPermission = null;
+
+    /**
      * Creates a URL for the given action and model.
      * This method is called for each button and each row.
      * @param string $action the button name (or action ID)
@@ -70,7 +83,7 @@ class ActionLinkColumn extends DataColumn {
         $params[0] = $this->controller ? $this->controller . '/' . $action : $action;
 
         if ($this->backUrl) {
-            $params[BackUrlBehavior::BACK_URL_PARAM] = Yii::$app->request->url;
+            $params = BackUrlBehavior::addBackUrl($params);
         }
 
         return Url::toRoute($params);
@@ -78,6 +91,19 @@ class ActionLinkColumn extends DataColumn {
 
     protected function renderDataCellContent($model, $key, $index) {
         $content = parent::renderDataCellContent($model, $key, $index);
+
+        $withLink = true;
+        if (null !== $this->checkPermission) {
+            if ($this->checkPermission instanceof \Closure) {
+                $withLink = call_user_func($this->checkPermission, $this->action, $model, $key, $index, $this);
+            } else {
+                $withLink = $this->checkPermission;
+            }
+        }
+
+        if (!$withLink) {
+            return $content;
+        }
 
         $url = $this->createUrl($this->action, $model, $key, $index);
         return Html::a($content, $url);
