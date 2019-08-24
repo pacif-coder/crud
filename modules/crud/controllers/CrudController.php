@@ -3,34 +3,57 @@ namespace app\modules\crud\controllers;
 
 use Yii;
 use yii\web\Controller;
-use yii\data\ActiveDataProvider;
 use yii\web\NotFoundHttpException;
 use yii\base\InvalidConfigException;
 
 use app\modules\crud\behaviors\BackUrlBehavior;
-use app\modules\crud\grid\SearchModel;
+use app\modules\crud\behaviors\BreadCrumbsBehavior;
+
 use app\modules\crud\builder\FormBuilder;
 use app\modules\crud\builder\GridBuilder;
 use app\modules\crud\helpers\ClassI18N;
 
 /**
  * Default controller for the `admin` module
+ *
+ * @property View|\yii\web\View $view The view object that can be used to render views or view files.
  */
-class DefaultController extends Controller {
+class CrudController extends Controller {
     public $modelClass;
     public $messageCategory;
     public $modelSearchClass;
 
-    public $withFilter = false;
-    public $filterInGrid = true;
     public $addCreateButton = true;
-    public $gridDefaultOrder;
+
+    public $assets = [];
+
+    /**
+     * @var \app\modules\crud\builder\GridBuilder
+     */
+    protected $gridBuilder;
+
+    protected $gridBuilderEvent = [
+        GridBuilder::EVENT_BEFORE_BUILD => 'beforeGridBuild',
+        GridBuilder::EVENT_AFTER_BUILD => 'afterGridBuild',
+        GridBuilder::EVENT_BEFORE_FILTER_APPLY => 'beforeFilterApply',
+    ];
+
+    /**
+     * @var \app\modules\crud\builder\FormBuilder
+     */
+    protected $formBuilder;
+
+    protected $formBuilderEvent = [
+        FormBuilder::EVENT_BEFORE_BUILD => 'beforeFormBuild',
+        FormBuilder::EVENT_AFTER_BUILD => 'afterFormBuild',
+    ];
 
     protected $_useCrudViewPath = true;
 
     public function behaviors() {
         $behaviors = parent::behaviors();
         $behaviors['backUrl'] = BackUrlBehavior::className();
+        $behaviors['breadCrumbs'] = BreadCrumbsBehavior::className();
 
         return $behaviors;
     }
@@ -45,6 +68,15 @@ class DefaultController extends Controller {
         if (!$this->messageCategory && $this->modelClass) {
             $this->messageCategory = ClassI18N::class2messagesPath($this->modelClass);
         }
+
+        if (!$this->assets) {
+            return;
+        }
+
+        $view = parent::getView();
+        foreach ($this->assets as $asset) {
+            $view->registerAssetBundle($asset);
+        }
     }
 
     /**
@@ -55,55 +87,27 @@ class DefaultController extends Controller {
         $view = $this->getView();
         $view->title = Yii::t($this->messageCategory, 'List items');
 
-        $query = $this->getGridQuery();
-        $filterModel = $this->getGridFilter($query);
-        $gridOptions = $this->getGridOptions($query, $filterModel);
+        $builder = $this->getGridBuilder();
+        $builder->build();
 
-        return $this->render('index', compact(['gridOptions', 'filterModel']));
+        return $this->render('index', compact(['builder']));
     }
 
-    protected function getGridOptions($query, $filterModel = null) {
-        $builder = $this->getBuilder('grid');
-        $builder->build($this->modelClass);
-
-        return [
-            'dataProvider' => $this->getGridProvider($query, $builder),
-            'filterModel' => $this->filterInGrid && $filterModel ? $filterModel : null,
-            'showHeader' => true,
-            'columns' => $builder->columns,
-        ];
-    }
-
-    protected function getGridProvider($query, $builder) {
-        $options = [
-            'query' => $query,
-        ];
-
-        if (null !== $this->gridDefaultOrder) {
-            $options['sort']['defaultOrder'] = $this->gridDefaultOrder;
-        } elseif ($builder->nameAttr) {
-            $options['sort']['defaultOrder'] = [$builder->nameAttr => SORT_ASC];
+    public function getGridBuilder($withCopy = true) {
+        if ($this->gridBuilder) {
+            return $this->gridBuilder;
         }
 
-        return new ActiveDataProvider($options);
-    }
-
-    protected function getGridFilter($query) {
-        if (!$this->withFilter) {
-            return;
+        $this->gridBuilder = new GridBuilder();
+        if ($withCopy) {
+            $this->gridBuilder->controller2this($this);
         }
 
-        $filterModel = new SearchModel();
-        $filterModel->setModel(Yii::createObject($this->modelClass));
-        $filterModel->load(Yii::$app->request->get());
-        $filterModel->filter($query);
+        foreach ($this->gridBuilderEvent as $event => $method) {
+            $this->gridBuilder->on($event, [$this, $method]);
+        }
 
-        return $filterModel;
-    }
-
-    protected function getGridQuery() {
-        $modelClass = $this->modelClass;
-        return $modelClass::find();
+        return $this->gridBuilder;
     }
 
     /**
@@ -132,7 +136,7 @@ class DefaultController extends Controller {
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function _actionEdit($id = null) {
+    protected function _actionEdit($id = null) {
         $model = $this->findModel($id);
 
         if ($model->load(Yii::$app->request->post()) && $model->validate()) {
@@ -141,7 +145,20 @@ class DefaultController extends Controller {
             return $this->goBack();
         }
 
-        $builder = $this->getBuilder('form');
+        $builder = $this->getFromBuilder();
+
+        foreach ($this->formBuilderEvent as $event => $method) {
+            if ($model->hasMethod($method)) {
+                $this->formBuilder->on($event, [$model, $method]);
+            }
+        }
+
+        foreach ($this->formBuilderEvent as $event => $method) {
+            if ($this->hasMethod($method)) {
+                $this->formBuilder->on($event, [$this, $method]);
+            }
+        }
+
         $builder->build($model);
 
         $view = $this->getView();
@@ -158,50 +175,39 @@ class DefaultController extends Controller {
         return $this->render('edit', compact(['model', 'builder']));
     }
 
+    public function getFromBuilder($withCopy = true) {
+        if ($this->formBuilder) {
+            return $this->formBuilder;
+        }
+
+        $this->formBuilder = new FormBuilder();
+        if ($withCopy) {
+            $this->formBuilder->controller2this($this);
+        }
+
+        return $this->formBuilder;
+    }
+
     /**
      * Deletes an existing model object.
+     *
      * If deletion is successful, the browser will be redirected to the 'back' url.
      * @param string $id
      * @return mixed
      */
-    public function actionDelete($id) {
-        $model = $this->findModel($id, false);
-        if ($model) {
-            $model->delete();
+    public function actionDelete($id = null) {
+        if (null === $id) {
+            $selection = Yii::$app->request->post('selection', []);
+        } else {
+            $selection = [$id];
         }
 
-        return $this->goBack();
-    }
-
-    /**
-     * Deletes an existing model objects.
-     * If deletion is successful, the browser will be redirected to the 'back' url.
-     * @return mixed
-     */
-    public function actionMassDelete() {
         $modelClass = $this->modelClass;
-        $selection = Yii::$app->request->post('selection', []);
-
         foreach ($modelClass::findAll($selection) as $model) {
             $model->delete();
         }
 
         return $this->goBack();
-    }
-
-    protected function getBuilder($type) {
-        switch ($type) {
-            case 'form':
-                $builder = new FormBuilder();
-                break;
-
-            case 'grid':
-                $builder = new GridBuilder();
-                break;
-        }
-        $builder->controller2this($this);
-
-        return $builder;
     }
 
     /**
@@ -235,6 +241,23 @@ class DefaultController extends Controller {
         }
 
         $path = str_replace('/' . $this->module->id . '/', '/crud/', $path);
+        $path = str_replace('/' . $this->id, '/crud', $path);
+
         return $path;
+    }
+
+    protected function beforeFilterApply() {
+    }
+
+    protected function beforeGridBuild() {
+    }
+
+    protected function afterGridBuild() {
+    }
+
+    protected function beforeFormBuild() {
+    }
+
+    protected function afterFormBuild() {
     }
 }
