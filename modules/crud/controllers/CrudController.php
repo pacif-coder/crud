@@ -7,7 +7,6 @@ use yii\web\NotFoundHttpException;
 use yii\base\InvalidConfigException;
 
 use app\modules\crud\behaviors\BackUrlBehavior;
-use app\modules\crud\behaviors\BreadCrumbsBehavior;
 
 use app\modules\crud\builder\FormBuilder;
 use app\modules\crud\builder\GridBuilder;
@@ -26,6 +25,8 @@ class CrudController extends Controller {
     public $addCreateButton = true;
 
     public $assets = [];
+
+    public $breadCrumbs = [];
 
     /**
      * @var \app\modules\crud\builder\GridBuilder
@@ -53,7 +54,6 @@ class CrudController extends Controller {
     public function behaviors() {
         $behaviors = parent::behaviors();
         $behaviors['backUrl'] = BackUrlBehavior::className();
-        $behaviors['breadCrumbs'] = BreadCrumbsBehavior::className();
 
         return $behaviors;
     }
@@ -143,6 +143,11 @@ class CrudController extends Controller {
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->goBack();
         }
+
+        $this->breadCrumbs[] = [
+            'url' => $this->getBackUrl(),
+            'label' => Yii::t($this->messageCategory, 'List items'),
+        ];
 
         $builder = $this->getFromBuilder();
 
