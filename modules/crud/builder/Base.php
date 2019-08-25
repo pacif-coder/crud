@@ -285,6 +285,14 @@ class Base extends \yii\base\Component {
         ];
     }
 
+    public function bindEventsHandler($handler, $event2method) {
+        foreach ($event2method as $event => $method) {
+            if ($handler->hasMethod($method)) {
+                $this->on($event, [$handler, $method]);
+            }
+        }
+    }
+
     protected function beforeBuild() {
         $event = new Event();
         $this->trigger(self::EVENT_BEFORE_BUILD, $event);

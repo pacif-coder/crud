@@ -88,12 +88,17 @@ class CrudController extends Controller {
         $view->title = Yii::t($this->messageCategory, 'List items');
 
         $builder = $this->getGridBuilder();
+
+        // call controller event callback
+        $builder->bindEventsHandler($this, $this->gridBuilderEvent);
+
+        // build grid description
         $builder->build();
 
         return $this->render('index', compact(['builder']));
     }
 
-    public function getGridBuilder($withCopy = true) {
+    protected function getGridBuilder($withCopy = true) {
         if ($this->gridBuilder) {
             return $this->gridBuilder;
         }
@@ -101,10 +106,6 @@ class CrudController extends Controller {
         $this->gridBuilder = new GridBuilder();
         if ($withCopy) {
             $this->gridBuilder->controller2this($this);
-        }
-
-        foreach ($this->gridBuilderEvent as $event => $method) {
-            $this->gridBuilder->on($event, [$this, $method]);
         }
 
         return $this->gridBuilder;
@@ -139,26 +140,19 @@ class CrudController extends Controller {
     protected function _actionEdit($id = null) {
         $model = $this->findModel($id);
 
-        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
-            $model->save();
-
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->goBack();
         }
 
         $builder = $this->getFromBuilder();
 
-        foreach ($this->formBuilderEvent as $event => $method) {
-            if ($model->hasMethod($method)) {
-                $this->formBuilder->on($event, [$model, $method]);
-            }
-        }
+        // call model event callback first
+        $builder->bindEventsHandler($model, $this->formBuilderEvent);
 
-        foreach ($this->formBuilderEvent as $event => $method) {
-            if ($this->hasMethod($method)) {
-                $this->formBuilder->on($event, [$this, $method]);
-            }
-        }
+        // call controller event callback second
+        $builder->bindEventsHandler($this, $this->formBuilderEvent);
 
+        // build form description
         $builder->build($model);
 
         $view = $this->getView();
@@ -175,7 +169,7 @@ class CrudController extends Controller {
         return $this->render('edit', compact(['model', 'builder']));
     }
 
-    public function getFromBuilder($withCopy = true) {
+    protected function getFromBuilder($withCopy = true) {
         if ($this->formBuilder) {
             return $this->formBuilder;
         }
@@ -246,18 +240,28 @@ class CrudController extends Controller {
         return $path;
     }
 
-    protected function beforeFilterApply() {
+    protected function beforeFilterApply(\yii\base\Event $event) {
+        /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
+        $gridBuilder = $event->sender;
     }
 
-    protected function beforeGridBuild() {
+    protected function beforeGridBuild(\yii\base\Event $event) {
+        /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
+        $gridBuilder = $event->sender;
     }
 
-    protected function afterGridBuild() {
+    protected function afterGridBuild(\yii\base\Event $event) {
+        /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
+        $gridBuilder = $event->sender;
     }
 
-    protected function beforeFormBuild() {
+    protected function beforeFormBuild(\yii\base\Event $event) {
+        /* @var $formBuilder \app\modules\crud\builder\FormBuilder */
+        $formBuilder = $event->sender;
     }
 
-    protected function afterFormBuild() {
+    protected function afterFormBuild(\yii\base\Event $event) {
+        /* @var $formBuilder \app\modules\crud\builder\FormBuilder */
+        $formBuilder = $event->sender;
     }
 }
