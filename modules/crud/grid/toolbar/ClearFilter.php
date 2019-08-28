@@ -1,9 +1,9 @@
 <?php
 namespace app\modules\crud\grid\toolbar;
 
-use Yii;
 use yii\helpers\Html;
 use yii\helpers\Url;
+
 use app\modules\crud\grid\toolbar\Button;
 
 /**
@@ -24,6 +24,8 @@ class ClearFilter extends Button {
             return '';
         }
 
-        return Html::a($this->getContent(), $this->grid->getClearFilterUrl(), $this->getAttrs());
+        // drop all form filter params
+        $url = Url::current([$this->grid->filterModel->formName() => null]);
+        return Html::a($this->getContent(), $url, $this->getAttrs());
     }
 }

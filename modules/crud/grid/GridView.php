@@ -69,43 +69,6 @@ class GridView extends BaseGridView {
         parent::initColumns();
     }
 
-    public function getClearFilterUrl() {
-        $filterUrl = isset($this->filterUrl) ? $this->filterUrl : Yii::$app->request->url;
-
-        $url = '';
-        $components = parse_url($filterUrl);
-        if (isset($components['scheme'])) {
-            $url .= $components['scheme'] . '://';
-        }
-
-        if (isset($components['host'])) {
-            $url .= $components['host'];
-        }
-
-        if (isset($components['port'])) {
-            $url .= ':' . $components['port'];
-        }
-
-        if (isset($components['path'])) {
-            $url .= $components['path'];
-        }
-
-        if (isset($components['query'])) {
-            $get = [];
-            parse_str($components['query'], $get);
-            if (isset($get[$this->filterModel->formName()])) {
-                unset($get[$this->filterModel->formName()]);
-            }
-
-            $query = http_build_query($get);
-            if ($query) {
-                $url .= '?' . $query;
-            }
-        }
-
-        return $url;
-    }
-
     /**
      * Runs the widget.
      */
