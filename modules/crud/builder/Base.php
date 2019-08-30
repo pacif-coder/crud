@@ -1,6 +1,7 @@
 <?php
 namespace app\modules\crud\builder;
 
+use Yii;
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
@@ -15,6 +16,11 @@ use ReflectionClass;
  */
 class Base extends \yii\base\Component {
     public $modelClass;
+
+    public $extraControls = [];
+    public $addExtraControls = [];
+    public $removeExtraControls = [];
+    public $extraControlOptions = [];
 
     public $fields;
     public $skipColumnsInGrid = [];
@@ -52,8 +58,11 @@ class Base extends \yii\base\Component {
     protected $validatorts;
     protected $enumFieldTypes = ['dropDownList', 'radioList', 'checkboxList'];
     protected $mergeAsArray = [
-        'dbType2fieldType'
+        'dbType2fieldType',
+        'extraControlOptions',
     ];
+
+    protected $_extraControlsByPlace;
 
     protected static $class2nameAttr = [];
     protected static $class2dbColumns = [];
@@ -283,6 +292,95 @@ class Base extends \yii\base\Component {
             'format' => isset($matches[3]) ? $matches[3] : null,
             'label' => isset($matches[5]) ? $matches[5] : null,
         ];
+    }
+
+    /**
+     * Create buttons in tollbar
+     */
+    protected function createExtraControls() {
+        $this->_extraControlsByPlace = null;
+        $extraControls = array_merge($this->extraControls, $this->addExtraControls);
+        foreach ($extraControls as $i => $control) {
+            if (in_array($control, $this->removeExtraControls)) {
+                unset($extraControls[$i]);
+            }
+        }
+
+        $this->extraControls = [];
+        foreach ($extraControls as $place => $control) {
+            $options = null;
+
+            if (is_string($control)) {
+                $name = $control;
+                if (isset($this->extraControlOptions[$control])) {
+                    $options = $this->extraControlOptions[$control];
+                }
+
+                // if the control name does not contain slashes - this is the internal button
+                if (false === strpos($control, '\\')) {
+                    $control = ['class' => 'app\modules\crud\controls\\' . ucfirst($control)];
+                } else {
+                    $control = ['class' => $control];
+                }
+
+                $control['name'] = $name;
+            }
+
+            if (null !== $options) {
+                $control = array_merge($control, $options);
+            }
+
+            if (!is_int($place)) {
+                $control['place'] = $place;
+            }
+
+            $control = Yii::createObject($control);
+            if ($control->name) {
+                $this->extraControls[$control->name] = $control;
+            } else {
+                $this->extraControls[] = $control;
+            }
+        }
+    }
+
+    protected function extraControlsToPlace() {
+        $this->_extraControlsByPlace = [];
+        foreach ($this->extraControls as $control) {
+            if (!$control->place) {
+                continue;
+            }
+
+            $tmp = explode('/', $this->normalizePlace($control->place));
+            if (count($tmp) > 1) {
+                $this->_extraControlsByPlace[$tmp[0]][$tmp[1]][] = $control;
+            } else {
+                $this->_extraControlsByPlace[$tmp[0]][] = $control;
+            }
+        }
+    }
+
+    public function normalizePlace($place) {
+        $place = strtolower($place);
+        $place = str_replace('\\', '/', $place);
+        $place = preg_replace('/\/+/', '/', $place);
+        return preg_replace('/^\/+|\/+$/', '', $place);
+    }
+
+    public function extraControlsByPlace($place) {
+        $tmp = explode('/', $this->normalizePlace($place));
+        if (!isset($this->_extraControlsByPlace[$tmp[0]])) {
+            return '';
+        }
+
+        if (1 == count($tmp)) {
+            return implode('', $this->_extraControlsByPlace[$tmp[0]]);
+        }
+
+        if (2 == count($tmp) && !isset($this->_extraControlsByPlace[$tmp[0]][$tmp[1]])) {
+            return '';
+        }
+
+        return implode('', $this->_extraControlsByPlace[$tmp[0]][$tmp[1]]);
     }
 
     public function bindEventsHandler($handler, $event2method) {

@@ -203,7 +203,14 @@ class CrudController extends Controller {
 
         $modelClass = $this->modelClass;
         foreach ($modelClass::findAll($selection) as $model) {
+            /* @var $model \yii\db\ActiveRecord */
             $model->delete();
+            if (!$model->hasErrors()) {
+                continue;
+            }
+
+            Yii::$app->session->setFlash('danger', implode("\r\n", $model->getErrorSummary(true)));
+            break;
         }
 
         return $this->goBack();

@@ -41,6 +41,10 @@ class GridBuilder extends Base {
      */
     const EVENT_BEFORE_FILTER_APPLY = 'beforeFilterApply';
 
+    /**
+     *
+     * @var \yii\db\ActiveQuery
+     */
     protected $query;
     protected $provider;
     protected $gridOptions;
@@ -163,7 +167,7 @@ class GridBuilder extends Base {
         $this->filterModel->load(Yii::$app->request->get());
     }
 
-    protected function getProvider() {
+    public function getProvider() {
         if (null !== $this->provider) {
             return $this->provider;
         }
@@ -220,6 +224,10 @@ class GridBuilder extends Base {
         return $this->gridOptions;
     }
 
+    /**
+     *
+     * @return \yii\db\ActiveQuery
+     */
     public function getQuery() {
         if ($this->query) {
             return $this->query;
@@ -244,10 +252,8 @@ class GridBuilder extends Base {
                 continue;
             }
 
-            if (!$this->_model) {
-                $this->_model = new $this->modelClass();
-                $this->initValidators($this->_model);
-            }
+            $this->_createTmpModel();
+            $this->initValidators($this->_model);
 
             if (!isset($this->validatorts[$attr])) {
                 continue;
@@ -278,10 +284,8 @@ class GridBuilder extends Base {
                 continue;
             }
 
-            if (!$this->_model) {
-                $this->_model = new $this->modelClass();
-                $this->initValidators($this->_model);
-            }
+            $this->_createTmpModel();
+            $this->initValidators($this->_model);
 
             if (!isset($this->validatorts[$attr])) {
                 continue;
@@ -332,14 +336,12 @@ class GridBuilder extends Base {
         }
     }
 
-    protected function getColumnFormat($attr, $modelClass) {
+    protected function getColumnFormat($attr) {
         if (isset($this->columnFormats[$attr])) {
             return $this->columnFormats[$attr];
         }
 
-        if (!$this->_model) {
-            $this->_model = new $modelClass();
-        }
+        $this->_createTmpModel();
 
         $format = $this->getControlTypeByValidator($this->_model, $attr);
         switch ($format) {
@@ -349,7 +351,7 @@ class GridBuilder extends Base {
                 break;
         }
 
-        $dbColumns = $this->getDBColumns($modelClass);
+        $dbColumns = $this->getDBColumns($this->modelClass);
         if (isset($dbColumns[$attr])) {
             $column = $dbColumns[$attr];
 
@@ -365,18 +367,12 @@ class GridBuilder extends Base {
     protected function makeGridEditLink() {
         $targetColumn = null;
         foreach ($this->columns as $column => $desc) {
-            $columnName = null;
-            if (is_array($desc) && isset($desc['attribute'])) {
-                $columnName = $desc['attribute'];
-            } elseif (is_string($desc)) {
-                $columnName = $desc;
-            }
-
-            if (!$columnName) {
+            $attr = isset($desc['attribute'])? $desc['attribute'] : null;
+            if (null === $attr) {
                 continue;
             }
 
-            if ($this->nameAttr == $columnName) {
+            if ($this->nameAttr == $attr) {
                 $targetColumn = $column;
                 break;
             }
@@ -387,16 +383,20 @@ class GridBuilder extends Base {
         }
 
         $desc = $this->columns[$targetColumn];
-        if (is_array($desc) && isset($desc['class'])) {
+        if (isset($desc['class'])) {
             return;
-        }
-
-        if (is_string($desc)) {
-            $desc = ['attribute' => $desc];
         }
 
         $desc['class'] = ActionLinkColumn::className();
         $this->columns[$targetColumn] = $desc;
+    }
+
+    protected function _createTmpModel() {
+        if ($this->_model) {
+            return;
+        }
+
+        $this->_model = $this->modelClass::instantiate(null);
     }
 
     protected function getDefaultColumns($modelClass) {

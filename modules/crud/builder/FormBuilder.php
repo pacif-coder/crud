@@ -14,7 +14,10 @@ use app\modules\crud\builder\Base;
  */
 class FormBuilder extends Base {
     public $fieldTypes;
+    public $type2fields;
     public $fieldOptions;
+
+    public $extraControls = ['save', 'cancel'];
 
     public $fieldSet2fields;
     public $fieldSetLabels = [];
@@ -28,9 +31,19 @@ class FormBuilder extends Base {
     }
 
     public function build(ActiveRecord $model) {
-        foreach (['fieldTypes', 'fieldOptions', 'enumFields'] as $param) {
+        foreach (['fieldTypes', 'type2fields', 'fieldOptions', 'enumFields'] as $param) {
             if (null === $this->{$param}) {
                 $this->{$param} = [];
+            }
+        }
+
+        foreach ($this->type2fields as $type => $fields) {
+            if (is_string($fields)) {
+                $fields = preg_split('/\s+/', preg_replace('/^\s+|\s+$/', '', $fields));
+            }
+
+            foreach ($fields as $field) {
+                $this->fieldTypes[$field] = $type;
             }
         }
 
@@ -69,7 +82,11 @@ class FormBuilder extends Base {
             }
         }
 
+        $this->createExtraControls();
+
         $this->afterBuild();
+
+        $this->extraControlsToPlace();
     }
 
     protected function initEnumOptions($model, $attr) {

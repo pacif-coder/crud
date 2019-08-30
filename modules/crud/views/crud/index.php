@@ -12,18 +12,19 @@ use app\modules\crud\behaviors\BackUrlBehavior;
 ?>
 <div>
     <h1 class="main-title clearfix">
-        <?= Html::encode($this->title) ?>
+        <?= preg_replace('/&quot;(.*?)&quot;/', '<span>$1</span>', Html::encode($this->title)) ?>
         <div class="pull-right">
             <?php
             if ($this->context->addCreateButton) {
-                $url = ['create'];
-                $url = BackUrlBehavior::addBackUrl($url);
+                $url = BackUrlBehavior::addBackUrl(['create']);
                 echo Html::a(Yii::t($this->context->messageCategory, 'Create item'), $url, ['class' => 'btn btn-success']);
             }
             ?>
         </div>
     </h1>
     <?php
+        include 'include/flashes.php';
+
         $grid = GridView::begin($builder->getOptions());
         GridView::end();
     ?>
