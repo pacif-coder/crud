@@ -7,6 +7,8 @@ use app\modules\crud\helpers\ClassI18N;
 use yii\web\Request;
 use yii\helpers\ArrayHelper;
 
+use ReflectionClass;
+
 /**
  * @XXX
  *
@@ -43,6 +45,12 @@ class Base extends \yii\base\BaseObject {
         if ($this->icon) {
             $content .= Html::icon($this->icon) . ' ';
         }
+
+        if (!$this->label) {
+            $ref = new ReflectionClass($this);
+            $this->label = lcfirst($ref->getShortName());
+        }
+
         $content .= Yii::t($this->messageCategory, $this->label);
 
         return $content;

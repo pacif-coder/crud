@@ -5,6 +5,8 @@ use yii\base\DynamicModel;
 use yii\base\Model;
 use yii\db\ActiveRecord;
 
+use app\modules\crud\builder\GridBuilder;
+
 class FilterModel extends DynamicModel {
     /**
      * @var null|array
@@ -16,38 +18,58 @@ class FilterModel extends DynamicModel {
     public $removeFilterAttrs = [];
     public $filterAttrOperator = [];
     public $filterOnlyIndexed = true;
-    public $noApplyAttrs = [];
+    public $noApplyFilterAttrs = [];
     public $transformAttrMap = [];
 
     protected $_model;
     protected $_formName;
     protected $_isLoaded;
 
-    public function builder2this($builder) {
+    public function builder2this(GridBuilder $builder) {
         $builderVars = array_keys(get_object_vars($builder));
         $thisVars = array_keys(get_object_vars($this));
         foreach (array_intersect($builderVars, $thisVars) as $param) {
             $this->{$param} = $builder->{$param};
         }
+
+        if (null !== $this->filterAttrs || !$builder->filterInGrid) {
+            return;
+        }
+
+        $this->filterAttrs = [];
+        foreach ($builder->columns as $desc) {
+            if (!isset($desc['attribute'])) {
+                continue;
+            }
+
+            if (isset($desc['filter']) && !$desc['filter']) {
+                continue;
+            }
+
+            $this->filterAttrs[] = $desc['attribute'];
+        }
     }
 
     public function setModel(Model $model) {
+        $this->_formName = $model->formName();
+        $this->_isLoaded = null;
+
         if (null === $this->filterAttrs) {
             $filterAttrs = $model->attributes();
-
-            if ($this->filterOnlyIndexed && $model instanceof ActiveRecord) {
-                $indexed = [];
-
-                $modelClass = get_class($model);
-                $table = $modelClass::tableName();
-                foreach($modelClass::getDb()->getSchema()->getTableIndexes($table) as $indexes) {
-                    $indexed = array_merge($indexed, $indexes->columnNames);
-                }
-
-                $filterAttrs = array_intersect($filterAttrs, $indexed);
-            }
         } else {
             $filterAttrs = $this->filterAttrs;
+        }
+
+        if ($this->filterOnlyIndexed && $model instanceof ActiveRecord) {
+            $indexed = [];
+
+            $modelClass = get_class($model);
+            $table = $modelClass::tableName();
+            foreach($modelClass::getDb()->getSchema()->getTableIndexes($table) as $indexes) {
+                $indexed = array_merge($indexed, $indexes->columnNames);
+            }
+
+            $filterAttrs = array_intersect($filterAttrs, $indexed);
         }
 
         $filterAttrs = array_merge($filterAttrs, $this->addFilterAttrs);
@@ -57,9 +79,6 @@ class FilterModel extends DynamicModel {
             $this->defineAttribute($attr);
             $this->addRule($attr, 'safe');
         }
-
-        $this->_formName = $model->formName();
-        $this->_isLoaded = null;
     }
 
     public function load($data, $formName = null) {
@@ -72,7 +91,7 @@ class FilterModel extends DynamicModel {
 
     public function filter($query) {
         foreach ($this->filterAttrs as $attr) {
-            if (in_array($attr, $this->noApplyAttrs)) {
+            if (in_array($attr, $this->noApplyFilterAttrs)) {
                 continue;
             }
 

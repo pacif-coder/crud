@@ -15,8 +15,6 @@ class ClearFilter extends Button {
 
     public $label = 'Clear filter';
 
-    public $align = 'right';
-
     public $order = -1;
 
     public function html() {

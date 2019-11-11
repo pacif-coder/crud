@@ -10,53 +10,40 @@ use yii\web\View;
 ?>
 <div>
     <?php
-        include 'include/title.php';
-        include 'include/flashes.php';
+    echo $this->render('include/title', compact(['builder']));
 
-        $form = ActiveForm::begin([
-            'layout' => 'horizontal',
-        ]);
-    ?>
+    $form = ActiveForm::begin([
+        'layout' => 'horizontal',
+    ]);
 
-    <?= $form->errorSummary($model) ?>
+    $form->errorSummary($model);
 
-    <?php
-        if ($builder->fieldSet2fields && $builder->fields) {
-            $notInFieldSets = $builder->fields;
-            foreach ($builder->fieldSet2fields as $fieldSet => $fields) {
-                $notInFieldSets = array_diff($notInFieldSets, $fields);
+    if ($builder->fieldSet2fields && $builder->fields) {
+        $notInFieldSets = $builder->fields;
+        foreach ($builder->fieldSet2fields as $fieldSet => $fields) {
+            $notInFieldSets = array_diff($notInFieldSets, $fields);
 
-                $fields = array_intersect($fields, $builder->fields);
-                if ($fields) {
-                    $builder->fieldSet2fields[$fieldSet] = $fields;
-                } else {
-                    unset($builder->fieldSet2fields[$fieldSet]);
-                }
-            }
-
-            foreach ($notInFieldSets as $field) {
-                include 'include/controls.php';
-            }
-
-            foreach ($builder->fieldSet2fields as $fieldSet => $fields) {
-                echo Html::beginTag('fieldset');
-                echo Html::tag('legend', $fieldSet . $builder->extraControlsByPlace("fieldSet/{$fieldSet}"));
-                foreach ($fields as $field) {
-                    include 'include/controls.php';
-                }
-                echo Html::endTag('fieldset');
-            }
-        } else {
-            foreach ($builder->fields as $field) {
-                include 'include/controls.php';
+            $fields = array_intersect($fields, $builder->fields);
+            if ($fields) {
+                $builder->fieldSet2fields[$fieldSet] = $fields;
+            } else {
+                unset($builder->fieldSet2fields[$fieldSet]);
             }
         }
+
+        echo $builder->fields2string($notInFieldSets, $form, $model);
+        foreach ($builder->fieldSet2fields as $fieldSet => $fields) {
+            echo Html::beginTag('fieldset');
+            $legend = $builder->getFieldSetLegend($fieldSet);
+            echo Html::tag('legend', $legend . $builder->extraControlsByPlace("fieldSet/{$fieldSet}"));
+            echo $builder->fields2string($fields, $form, $model);
+            echo Html::endTag('fieldset');
+        }
+    } else {
+        echo $builder->fields2string($builder->fields, $form, $model);
+    }
+
+    echo $this->render('include/bottom-buttons', compact(['builder']));
+    ActiveForm::end();
     ?>
-    <hr>
-    <div class="form-group">
-        <div class="col-xs-12 bottom-buttons">
-            <?= $builder->extraControlsByPlace('bottom') ?>
-        </div>
-    </div>
-<?php ActiveForm::end(); ?>
 </div>

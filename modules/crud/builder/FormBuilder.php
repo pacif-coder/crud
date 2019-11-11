@@ -1,9 +1,8 @@
 <?php
 namespace app\modules\crud\builder;
 
+use Yii;
 use yii\db\ActiveRecord;
-use yii\validators\BooleanValidator;
-use yii\validators\FileValidator;
 use yii\base\InvalidConfigException;
 
 use app\modules\crud\builder\Base;
@@ -13,14 +12,12 @@ use app\modules\crud\builder\Base;
  *
  */
 class FormBuilder extends Base {
-    public $fieldTypes;
-    public $type2fields;
-    public $fieldOptions;
-
-    public $extraControls = ['save', 'cancel'];
+    public $formExtraControls = ['save', 'cancel'];
 
     public $fieldSet2fields;
-    public $fieldSetLabels = [];
+    public $fieldSetLegends = [];
+
+    protected $_extraControlVar = 'form';
 
     public function controller2this($controller) {
         if (isset($controller->modelClass)) {
@@ -31,6 +28,7 @@ class FormBuilder extends Base {
     }
 
     public function build(ActiveRecord $model) {
+        $this->_isExtraControlCreated = false;
         foreach (['fieldTypes', 'type2fields', 'fieldOptions', 'enumFields'] as $param) {
             if (null === $this->{$param}) {
                 $this->{$param} = [];
@@ -97,7 +95,7 @@ class FormBuilder extends Base {
             }
 
             if (is_callable($options)) {
-                return $this->enumOptions[$attr] = call_user_func($options);
+                $this->enumOptions[$attr] = call_user_func($options);
             }
 
             return;
@@ -134,5 +132,13 @@ class FormBuilder extends Base {
         if (in_array($attr, $this->emailAttrs)) {
             return 'email';
         }
+    }
+
+    public function getFieldSetLegend($fieldSet) {
+        if (isset($this->fieldSetLegends[$fieldSet])) {
+            return $this->fieldSetLegends[$fieldSet];
+        }
+
+        return Yii::t($this->messageCategory, $fieldSet);
     }
 }

@@ -8,6 +8,10 @@ use yii\validators\ExistValidator;
 use yii\validators\EmailValidator;
 use yii\base\Event;
 
+use yii\bootstrap\Html;
+
+use app\modules\crud\controls\CopyMessageCategoryInterface;
+
 use ReflectionClass;
 
 /**
@@ -17,18 +21,47 @@ use ReflectionClass;
 class Base extends \yii\base\Component {
     public $modelClass;
 
-    public $extraControls = [];
+    public $fields;
+    public $fieldOptions;
+    public $fieldTypes;
+    public $type2fields;
+    public $fieldType2fieldMethod = [
+        'textarea' => 'textarea',
+        'email' => 'textInput',
+        'boolean' => 'checkbox',
+        'password' => 'passwordInput',
+        'dropDownList' => 'dropDownList',
+        'checkboxList' => 'checkboxList',
+        'radioList' => 'radioList',
+        'hidden' => 'hiddenInput',
+    ];
+
+    public $fieldType2widgetOptions = [
+        'phone' => [
+            'mask' => '8 (999) 999 99 99',
+        ],
+    ];
+
+    public $fieldType2widget = [
+        'date'  => 'yii\jui\DatePicker',
+        'phone' => 'yii\widgets\MaskedInput',
+        'file'  => 'app\modules\crud\widgets\FileInput',
+    ];
+
+    public $formExtraControls = [];
+    public $gridExtraControls = [];
     public $addExtraControls = [];
     public $removeExtraControls = [];
     public $extraControlOptions = [];
 
-    public $fields;
     public $skipColumnsInGrid = [];
 
     public $enumFields;
     public $enumOptions;
     public $addEmptyEnumOption = true;
     public $emptyEnumOptionLabel = '---';
+
+    public $messageCategory;
 
     public $uptake = true;
     public $nameAttr = null;
@@ -62,6 +95,8 @@ class Base extends \yii\base\Component {
         'extraControlOptions',
     ];
 
+    protected $_isExtraControlCreated = false;
+    protected $_extraControlVar;
     protected $_extraControlsByPlace;
 
     protected static $class2nameAttr = [];
@@ -294,19 +329,31 @@ class Base extends \yii\base\Component {
         ];
     }
 
+    public function dropExtraControls() {
+        $this->_isExtraControlCreated = false;
+        $this->_extraControlsByPlace = null;
+    }
+
     /**
      * Create buttons in tollbar
      */
-    protected function createExtraControls() {
+    public function createExtraControls() {
+        if ($this->_isExtraControlCreated) {
+            return;
+        }
+
+        $this->_isExtraControlCreated = true;
         $this->_extraControlsByPlace = null;
-        $extraControls = array_merge($this->extraControls, $this->addExtraControls);
+
+        $extraControlVar = "{$this->_extraControlVar}ExtraControls";
+        $extraControls = array_merge($this->{$extraControlVar}, $this->addExtraControls);
         foreach ($extraControls as $i => $control) {
             if (in_array($control, $this->removeExtraControls)) {
                 unset($extraControls[$i]);
             }
         }
 
-        $this->extraControls = [];
+        $this->{$extraControlVar} = [];
         foreach ($extraControls as $place => $control) {
             $options = null;
 
@@ -330,22 +377,32 @@ class Base extends \yii\base\Component {
                 $control = array_merge($control, $options);
             }
 
-            if (!is_int($place)) {
+            if (is_subclass_of($control['class'], CopyMessageCategoryInterface::class)) {
+                $control['messageCategory'] = $this->messageCategory;
+            }
+
+            if (!is_int($place) && (!isset($control['place']) || !$control['place'])) {
                 $control['place'] = $place;
             }
 
-            $control = Yii::createObject($control);
-            if ($control->name) {
-                $this->extraControls[$control->name] = $control;
+            if (isset($control['name']) && $control['name']) {
+                $this->{$extraControlVar}[$control['name']] = $control;
             } else {
-                $this->extraControls[] = $control;
+                $this->{$extraControlVar}[] = $control;
             }
         }
     }
 
     protected function extraControlsToPlace() {
+        $this->createExtraControls();
+        if (null !== $this->_extraControlsByPlace) {
+            return;
+        }
+
         $this->_extraControlsByPlace = [];
-        foreach ($this->extraControls as $control) {
+        $extraControlVar = "{$this->_extraControlVar}ExtraControls";
+        foreach ($this->{$extraControlVar} as $control) {
+            $control = Yii::createObject($control);
             if (!$control->place) {
                 continue;
             }
@@ -366,7 +423,26 @@ class Base extends \yii\base\Component {
         return preg_replace('/^\/+|\/+$/', '', $place);
     }
 
+    public function isExtraControlExist($place) {
+        $this->extraControlsToPlace();
+
+        $tmp = explode('/', $this->normalizePlace($place));
+        if (!isset($this->_extraControlsByPlace[$tmp[0]])) {
+            return '';
+        }
+
+        if (1 == count($tmp)) {
+            return isset($this->_extraControlsByPlace[$tmp[0]]);
+        }
+
+        if (2 == count($tmp)) {
+            return isset($this->_extraControlsByPlace[$tmp[0]][$tmp[1]]);
+        }
+    }
+
     public function extraControlsByPlace($place) {
+        $this->extraControlsToPlace();
+
         $tmp = explode('/', $this->normalizePlace($place));
         if (!isset($this->_extraControlsByPlace[$tmp[0]])) {
             return '';
@@ -381,6 +457,70 @@ class Base extends \yii\base\Component {
         }
 
         return implode('', $this->_extraControlsByPlace[$tmp[0]][$tmp[1]]);
+    }
+
+    protected function _hidden2string($control) {
+        return (string) $control->hiddenInput()->parts['{input}'];
+    }
+
+    protected function _staticControl2string($control) {
+        Html::addCssClass($control->options, 'no-required');
+        $control->enableClientValidation = false;
+
+        return (string) $control->staticControl();
+    }
+
+    public function field2string($field, $form, $model) {
+        $type = isset($this->fieldTypes[$field]) ? $this->fieldTypes[$field] : null;
+        switch ($type) {
+            case 'static':
+                $type = 'staticControl';
+                break;
+
+            case 'select':
+                $type = 'dropDownList';
+                break;
+        }
+
+        $typeOptions = isset($this->fieldType2widgetOptions[$type]) ? $this->fieldType2widgetOptions[$type] : [];
+        $fieldOptions = isset($this->fieldOptions[$field]) ? $this->fieldOptions[$field] : [];
+        $options = array_merge($typeOptions, $fieldOptions);
+
+        $widget = isset($this->fieldType2widget[$type])? $this->fieldType2widget[$type] : null;
+        if ($widget) {
+            return (string) $form->field($model, $field)->widget($widget, $options? $options : null);
+        }
+
+        /* @var $control \yii\bootstrap\ActiveField */
+        $control = $form->field($model, $field, $options);
+
+        $innerMethod = "_{$type}2string";
+        if (method_exists($this, $innerMethod)) {
+            return $this->{$innerMethod}($control, $options);
+        }
+
+        $method = isset($this->fieldType2fieldMethod[$type])? $this->fieldType2fieldMethod[$type] : null;
+
+        if (in_array($field, $this->enumFields) || isset($this->enumOptions[$field])) {
+            $items = isset($this->enumOptions[$field])? $this->enumOptions[$field] : [];
+            if ($method) {
+                return (string) $control->{$method}($items);
+            }
+        }
+
+        if ($method) {
+            return (string) $control->{$method}();
+        }
+
+        return (string) $control->textInput();
+    }
+
+    public function fields2string($fields, $form, $model) {
+        $str = '';
+        foreach ($fields as $field) {
+            $str .= $this->field2string($field, $form, $model);
+        }
+        return $str;
     }
 
     public function bindEventsHandler($handler, $event2method) {

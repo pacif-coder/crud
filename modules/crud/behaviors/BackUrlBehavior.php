@@ -34,6 +34,8 @@ use yii\base\Controller;
  * ```
  */
 class BackUrlBehavior extends Behavior {
+    public $ignoreScheme = true;
+
     const BACK_URL_PARAM = 'back-url';
 
     public function getBackUrl() {
@@ -44,8 +46,16 @@ class BackUrlBehavior extends Behavior {
 
         $url = $this->getHostInfo() . Yii::$app->request->getUrl();
         $referer = Yii::$app->request->headers->get('referer');
-        if (null !== $referer && $url != $referer) {
-            return $referer;
+        if (null !== $referer) {
+            $refererBackup = $referer;
+            if ($this->ignoreScheme) {
+                $url = strstr($url, '://');
+                $referer = strstr($referer, '://');
+            }
+
+            if ($url != $referer) {
+                return $refererBackup;
+            }
         }
 
         $session = Yii::$app->session;

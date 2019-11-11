@@ -16,7 +16,7 @@ class Delete extends SendFormButton {
     public $label = 'Delete';
     public $colorClass = 'btn-danger';
     public $icon = 'remove';
-    public $order = -1;
+
     public $messageCategory = 'yii';
 
     public function getAttrs() {

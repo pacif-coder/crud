@@ -1,7 +1,9 @@
 <?php
 use yii\bootstrap\Html;
 
+/* @var $control \yii\bootstrap\ActiveField */
 $control = $form->field($model, $field);
+
 $fieldType = isset($builder->fieldTypes[$field]) ? $builder->fieldTypes[$field] : null;
 $options = isset($builder->fieldOptions[$field]) ? $builder->fieldOptions[$field] : [];
 
@@ -33,7 +35,7 @@ switch ($fieldType) {
         break;
 
     case 'email':
-        echo $control->input('text', $options);
+        echo $control->textInput($options);
         break;
 
     case 'phone':
@@ -47,7 +49,7 @@ switch ($fieldType) {
         break;
 
     case 'password':
-        echo $control->input('password', $options);
+        echo $control->passwordInput($options);
         break;
 
     case 'file':
@@ -59,6 +61,6 @@ switch ($fieldType) {
         break;
 
     default:
-        echo $control->input('text', $options);
+        echo $control->textInput($options);
         break;
 }

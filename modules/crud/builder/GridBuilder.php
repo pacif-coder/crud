@@ -20,19 +20,25 @@ class GridBuilder extends Base {
 
     public $gridDefaultOrder;
     public $gridWithEditLink = true;
+    public $gridOptions = [];
 
     public $addToolbarButtons = [];
     public $removeToolbarButtons = [];
     public $toolbarButtonOptions = [];
 
+    public $gridExtraControls = ['create'];
+
+    // Filter part
     public $withFilter = false;
     public $filterInGrid = true;
+
     public $filterAttrs;
     public $addFilterAttrs = [];
     public $removeFilterAttrs = [];
     public $filterAttrOperator = [];
     public $filterOnlyIndexed = true;
-    public $noApplyAttrs = [];
+    public $noApplyFilterAttrs = [];
+    public $transformAttrMap = [];
 
     public $autoJoin = true;
 
@@ -47,12 +53,14 @@ class GridBuilder extends Base {
      */
     protected $query;
     protected $provider;
-    protected $gridOptions;
     protected $filterModel;
 
     protected $_model;
     protected $_transformSortAttrMap = [];
     protected $_transformFilterAttrMap = [];
+    protected $_isChangeGridOption = false;
+
+    protected $_extraControlVar = 'grid';
 
     public function controller2this($controller) {
         if (isset($controller->modelClass)) {
@@ -69,6 +77,7 @@ class GridBuilder extends Base {
     }
 
     public function build($modelClass = null) {
+        $this->_isExtraControlCreated = false;
         $this->_transformSortAttrMap = $this->_transformFilterAttrMap = [];
 
         if ($modelClass && $modelClass != $this->modelClass) {
@@ -112,7 +121,6 @@ class GridBuilder extends Base {
             }
         }
 
-        $this->createFilter();
         foreach ($this->columns as $column => $desc) {
             if (isset($desc['format'])) {
                 continue;
@@ -135,7 +143,10 @@ class GridBuilder extends Base {
 
         $this->fixSort();
 
+        $this->createFilter();
         $this->filterApply();
+
+        $this->createExtraControls();
 
         $this->afterBuild();
     }
@@ -204,18 +215,16 @@ class GridBuilder extends Base {
     }
 
     public function &getOptions() {
-        if (null !== $this->gridOptions) {
+        if ($this->_isChangeGridOption) {
             return $this->gridOptions;
         }
 
-        $this->gridOptions = [
-            'showHeader' => true,
-            'columns' => $this->columns,
-            'addToolbarButtons' => $this->addToolbarButtons,
-            'removeToolbarButtons' => $this->removeToolbarButtons,
-            'toolbarButtonOptions' => $this->toolbarButtonOptions,
-            'dataProvider' => $this->getProvider(),
-        ];
+        $this->_isChangeGridOption = true;
+        $this->gridOptions['columns'] = $this->columns;
+        $this->gridOptions['addToolbarButtons'] = $this->addToolbarButtons;
+        $this->gridOptions['removeToolbarButtons'] = $this->removeToolbarButtons;
+        $this->gridOptions['toolbarButtonOptions'] = $this->toolbarButtonOptions;
+        $this->gridOptions['dataProvider'] = $this->getProvider();
 
         if ($this->filterModel && $this->filterInGrid) {
             $this->gridOptions['filterModel'] = $this->filterModel;
@@ -235,6 +244,10 @@ class GridBuilder extends Base {
 
         $modelClass = $this->modelClass;
         return $this->query = $modelClass::find();
+    }
+
+    public function setQuery($query) {
+        return $this->query = $query;
     }
 
     protected function selectInFilter() {

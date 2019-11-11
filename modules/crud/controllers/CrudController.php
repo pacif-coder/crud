@@ -5,12 +5,16 @@ use Yii;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\base\InvalidConfigException;
+use yii\base\Theme;
 
 use app\modules\crud\behaviors\BackUrlBehavior;
 
 use app\modules\crud\builder\FormBuilder;
 use app\modules\crud\builder\GridBuilder;
 use app\modules\crud\helpers\ClassI18N;
+use app\modules\crud\assets\CrudAsset;
+
+use app\modules\crud\Module as CrudModule;
 
 /**
  * Default controller for the `admin` module
@@ -25,8 +29,7 @@ class CrudController extends Controller {
     public $addCreateButton = true;
 
     public $assets = [];
-
-    public $breadCrumbs = [];
+    public $defaultAsset = CrudAsset::class;
 
     /**
      * @var \app\modules\crud\builder\GridBuilder
@@ -49,8 +52,6 @@ class CrudController extends Controller {
         FormBuilder::EVENT_AFTER_BUILD => 'afterFormBuild',
     ];
 
-    protected $_useCrudViewPath = true;
-
     public function behaviors() {
         $behaviors = parent::behaviors();
         $behaviors['backUrl'] = BackUrlBehavior::className();
@@ -69,14 +70,34 @@ class CrudController extends Controller {
             $this->messageCategory = ClassI18N::class2messagesPath($this->modelClass);
         }
 
-        if (!$this->assets) {
-            return;
+        $view = parent::getView();
+
+        if ($this->defaultAsset) {
+            $view->registerAssetBundle($this->defaultAsset);
         }
 
-        $view = parent::getView();
         foreach ($this->assets as $asset) {
             $view->registerAssetBundle($asset);
         }
+
+        $this->mapFakeTheme();
+    }
+
+    protected function mapFakeTheme() {
+        $view = parent::getView();
+
+        $crudModule = new CrudModule('crud');
+        $crudViewPath = $crudModule->getViewPath() . DIRECTORY_SEPARATOR . $crudModule->defaultRoute;
+
+        $thisViewPath = $this->getViewPath();
+
+        $fakeTheme = new Theme();
+        $fakeTheme->pathMap[$thisViewPath] = [
+            $crudViewPath,
+            $thisViewPath,
+        ];
+
+        $view->theme = $fakeTheme;
     }
 
     /**
@@ -144,7 +165,8 @@ class CrudController extends Controller {
             return $this->goBack();
         }
 
-        $this->breadCrumbs[] = [
+        $view = $this->getView();
+        $view->params['breadcrumbs'][] = [
             'url' => $this->getBackUrl(),
             'label' => Yii::t($this->messageCategory, 'List items'),
         ];
@@ -160,7 +182,6 @@ class CrudController extends Controller {
         // build form description
         $builder->build($model);
 
-        $view = $this->getView();
         $isCreate = null === $id;
         if ($isCreate) {
             $view->title = Yii::t($this->messageCategory, 'Create item');
@@ -238,18 +259,6 @@ class CrudController extends Controller {
         if ($exception) {
             throw new NotFoundHttpException('The requested model does not exist.');
         }
-    }
-
-    public function getViewPath() {
-        $path = parent::getViewPath();
-        if (!$this->_useCrudViewPath) {
-            return $path;
-        }
-
-        $path = str_replace('/' . $this->module->id . '/', '/crud/', $path);
-        $path = str_replace('/' . $this->id, '/crud', $path);
-
-        return $path;
     }
 
     protected function beforeFilterApply(\yii\base\Event $event) {

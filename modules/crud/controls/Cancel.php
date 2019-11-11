@@ -3,9 +3,6 @@ namespace app\modules\crud\controls;
 
 use Yii;
 use yii\bootstrap\Html;
-use app\modules\crud\helpers\ClassI18N;
-use yii\web\Request;
-use yii\helpers\ArrayHelper;
 
 /**
  * @XXX
@@ -14,7 +11,7 @@ use yii\helpers\ArrayHelper;
 class Cancel extends Button {
     public $label = 'cancel';
 
-    public $place = 'bottom';
+    public $place = 'bottom/right';
 
     public function html() {
         $view = Yii::$app->getView();

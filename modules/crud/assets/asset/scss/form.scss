@@ -1,0 +1,111 @@
+form {
+    label.control-label {
+        color: #0000008f;
+    }
+
+    .required {
+        label.control-label {
+            margin-right: 0;
+
+            &::before {
+                content: '*';
+                color: #ff0000;
+                font-size: 13px;
+                line-height: 12px;
+                margin-right: 5px;
+                font-family: monospace;
+                position: relative;
+                top: -5px;
+            }
+        }
+    }
+
+    .required.no-required {
+        label.control-label {
+            &::before {
+                content: '';
+                margin-right: 0;
+            }
+        }
+    }
+
+    .input-with-checkbox {
+        width: 50%;
+        display: inline-block;
+        margin-right: 10px;
+    }
+
+    .hint-block {
+        display: block;
+        margin-top: 5px;
+        color: #999;
+    }
+
+    .error-summary {
+        color: #a94442;
+        background: #fdf7f7;
+        border-left: 3px solid #eed3d7;
+        padding: 10px 20px;
+        margin: 0 0 15px 0;
+    }
+
+    .not-set {
+        color: #c55;
+        font-style: italic;
+    }
+
+    fieldset legend .btn {margin-left: 5px;}
+}
+
+.scroll, .scroll-shot, .scroll-medium {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.scroll-shot {
+    max-height: 100px;
+}
+
+.scroll-medium {
+    max-height: 300px;
+}
+
+.image-input .dropzone {
+    min-height: 74px;
+
+    .dropzone-inner img {
+        width: 100px;
+    }
+}
+
+.file-upload-control {
+    padding-top: 9px;
+}
+
+.widget-file-input {
+    input[type="file"] {
+        display: inline-block;
+    }
+
+    span {
+        cursor: pointer;
+    }
+
+    a {
+        display: inline-block;
+        margin-right: 10px;
+        margin-bottom: 10px;
+
+        &.drop {text-decoration: line-through}
+    }
+}
+
+.bottom-buttons {
+    .btn {
+        margin-right: 10px;
+    }
+
+    .btn:last-child {
+        margin-right: 0;
+    }
+}

@@ -1,0 +1,9 @@
+h1.main-title { margin-bottom: 0.5em; }
+h1.main-title .btn + .btn { margin-left: 5px; }
+
+h1.main-title { margin-bottom: 20px; }
+h1.main-title > a { position: relative; top: 5px; }
+h1.main-title > span { color: #5cb85c; }
+h1.main-title > span:after, h1.main-title > span:before { color: #a0a3a0; font-size: 40px; }
+h1.main-title > span:after, h1.main-title > span:before { content: "\00BB"; }
+h1.main-title > span:before { content: "\00AB"; }
