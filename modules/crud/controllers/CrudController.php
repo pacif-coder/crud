@@ -93,8 +93,8 @@ class CrudController extends Controller {
 
         $fakeTheme = new Theme();
         $fakeTheme->pathMap[$thisViewPath] = [
-            $crudViewPath,
             $thisViewPath,
+            $crudViewPath,
         ];
 
         $view->theme = $fakeTheme;
