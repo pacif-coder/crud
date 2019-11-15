@@ -243,7 +243,7 @@ class GridBuilder extends Base {
         }
 
         $modelClass = $this->modelClass;
-        return $this->query = $modelClass::find();
+        return $this->query = $modelClass::find()->asArray(true);
     }
 
     public function setQuery($query) {
@@ -327,15 +327,15 @@ class GridBuilder extends Base {
         $joinToTable = $targetModelClass::tableName();
         $table = $query->modelClass::tableName();
         $joinAttr = $validator->targetAttribute[$attr];
-        $on = "{$joinToTable}.[[{$joinAttr}]] = {$table}.[[{$attr}]]";
+        $on = "[[{$joinToTable}]].[[{$joinAttr}]] = [[{$table}]].[[{$attr}]]";
 
         $query->join('left join', $joinToTable, $on);
         if (!$query->select) {
-            $query->addSelect("{$table}.*");
+            $query->addSelect("[[{$table}]].*");
         }
 
-        $query->addSelect("{$joinToTable}.[[{$nameAttr}]] as [[{$attr}]]");
-        $this->_transformSortAttrMap[$attr] = "{$joinToTable}.[[{$nameAttr}]]";
+        $query->addSelect("[[{$joinToTable}]].[[{$nameAttr}]] as [[{$attr}]]");
+        $this->_transformSortAttrMap[$attr] = "[[{$joinToTable}]].[[{$nameAttr}]]";
 
         $joinTableAttrs = array_keys($this->getDBColumns($targetModelClass));
         $tableAttrs = array_keys($this->getDBColumns($this->modelClass));
@@ -345,7 +345,7 @@ class GridBuilder extends Base {
         }
 
         foreach ($intersect as $attr) {
-            $this->_transformFilterAttrMap[$attr] = "{$table}.[[{$attr}]]";
+            $this->_transformFilterAttrMap[$attr] = "[[{$table}]].[[{$attr}]]";
         }
     }
 
