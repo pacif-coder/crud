@@ -165,12 +165,17 @@ class CrudController extends Controller {
             return $this->goBack();
         }
 
-        $view = $this->getView();
-        $view->params['breadcrumbs'][] = [
-            'url' => $this->getBackUrl(),
-            'label' => Yii::t($this->messageCategory, 'List items'),
-        ];
+        $this->addParentToBreadcrumbs();
 
+        $this->createEditTitle($id, $model);
+
+        $this->createForm($model);
+
+        $builder = $this->getFromBuilder();
+        return $this->render('edit', compact(['model', 'builder']));
+    }
+
+    protected function createForm($model) {
         $builder = $this->getFromBuilder();
 
         // call model event callback first
@@ -182,8 +187,14 @@ class CrudController extends Controller {
         // build form description
         $builder->build($model);
 
-        $isCreate = null === $id;
-        if ($isCreate) {
+        return $builder;
+    }
+
+    protected function createEditTitle($id, $model) {
+        $view = $this->getView();
+        $builder = $this->getFromBuilder();
+
+        if (null === $id) {
             $view->title = Yii::t($this->messageCategory, 'Create item');
         } elseif ($builder->nameAttr) {
             $name = $builder->nameAttr;
@@ -191,8 +202,15 @@ class CrudController extends Controller {
         } else {
             $view->title = Yii::t($this->messageCategory, 'Update item');
         }
+    }
 
-        return $this->render('edit', compact(['model', 'builder']));
+    protected function addParentToBreadcrumbs() {
+        $view = $this->getView();
+
+        $view->params['breadcrumbs'][] = [
+            'url' => $this->getBackUrl(),
+            'label' => Yii::t($this->messageCategory, 'List items'),
+        ];
     }
 
     protected function getFromBuilder($withCopy = true) {

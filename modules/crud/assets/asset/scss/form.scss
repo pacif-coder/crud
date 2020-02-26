@@ -54,7 +54,10 @@ form {
         font-style: italic;
     }
 
-    fieldset legend .btn {margin-left: 5px;}
+    fieldset legend {
+        .btn {margin-left: 5px;}
+        input[type="radio"], input[type="checkbox"] {margin-right: 5px;}
+    }
 }
 
 .scroll, .scroll-shot, .scroll-medium {

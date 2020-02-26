@@ -58,6 +58,7 @@ class Base extends \yii\base\Component {
 
     public $enumFields;
     public $enumOptions;
+    public $translationEnumOptions = [];
     public $addEmptyEnumOption = true;
     public $emptyEnumOptionLabel = '---';
 
@@ -89,7 +90,7 @@ class Base extends \yii\base\Component {
     const EVENT_AFTER_BUILD = 'afterBuild';
 
     protected $validatorts;
-    protected $enumFieldTypes = ['dropDownList', 'radioList', 'checkboxList'];
+    protected $enumFieldTypes = ['dropDownList', 'radioList', 'checkboxList', 'select'];
     protected $mergeAsArray = [
         'dbType2fieldType',
         'extraControlOptions',
@@ -101,6 +102,7 @@ class Base extends \yii\base\Component {
 
     protected static $class2nameAttr = [];
     protected static $class2dbColumns = [];
+    protected static $class2publicProperties = [];
 
     public function static2this($class, $prefix = 'fb_') {
         $ref = new ReflectionClass($class);
@@ -263,20 +265,8 @@ class Base extends \yii\base\Component {
     }
 
     protected function initEnumOptionsByExistValidator($validator, $attr) {
-        if (!in_array($attr, $this->enumFields)) {
-            $this->enumFields[] = $attr;
-        }
-
-        if (isset($this->enumOptions[$attr])) {
-            return;
-        }
-
         /* @var $validator ExistValidator */
         $this->enumOptions[$attr] = [];
-        if ($this->addEmptyEnumOption) {
-            $this->enumOptions[$attr][''] = $this->emptyEnumOptionLabel;
-        }
-
         $this->addEnumOptionsByExistValidator($this->enumOptions[$attr], $validator, $attr);
     }
 
@@ -459,17 +449,22 @@ class Base extends \yii\base\Component {
         return implode('', $this->_extraControlsByPlace[$tmp[0]][$tmp[1]]);
     }
 
-    protected function _hidden2string($control) {
-        return (string) $control->hiddenInput()->parts['{input}'];
+    /**
+     * Create string represention of form fields
+     * @return string
+     */
+    public function fields2string($fields, $form, $model) {
+        $str = '';
+        foreach ($fields as $field) {
+            $str .= $this->field2string($field, $form, $model);
+        }
+        return $str;
     }
 
-    protected function _staticControl2string($control) {
-        Html::addCssClass($control->options, 'no-required');
-        $control->enableClientValidation = false;
-
-        return (string) $control->staticControl();
-    }
-
+    /**
+     * Create string represention of form field
+     * @return string
+     */
     public function field2string($field, $form, $model) {
         $type = isset($this->fieldTypes[$field]) ? $this->fieldTypes[$field] : null;
         switch ($type) {
@@ -482,17 +477,19 @@ class Base extends \yii\base\Component {
                 break;
         }
 
-        $typeOptions = isset($this->fieldType2widgetOptions[$type]) ? $this->fieldType2widgetOptions[$type] : [];
+        $typeOptions = isset($this->fieldType2widgetOptions[$type])? $this->fieldType2widgetOptions[$type] : [];
         $fieldOptions = isset($this->fieldOptions[$field]) ? $this->fieldOptions[$field] : [];
         $options = array_merge($typeOptions, $fieldOptions);
 
+        /* @var $control \yii\bootstrap\ActiveField */
+        $publicProperties = $this->_receivePublicProperties($form, $model, $field);
+        $activeFieldOptions = $this->_splitOptions($options, $publicProperties);
+        $control = $form->field($model, $field, $activeFieldOptions);
+
         $widget = isset($this->fieldType2widget[$type])? $this->fieldType2widget[$type] : null;
         if ($widget) {
-            return (string) $form->field($model, $field)->widget($widget, $options? $options : null);
+            return $control->widget($widget, $options? $options : null);
         }
-
-        /* @var $control \yii\bootstrap\ActiveField */
-        $control = $form->field($model, $field, $options);
 
         $innerMethod = "_{$type}2string";
         if (method_exists($this, $innerMethod)) {
@@ -504,23 +501,67 @@ class Base extends \yii\base\Component {
         if (in_array($field, $this->enumFields) || isset($this->enumOptions[$field])) {
             $items = isset($this->enumOptions[$field])? $this->enumOptions[$field] : [];
             if ($method) {
-                return (string) $control->{$method}($items);
+                return $control->{$method}($items);
             }
         }
 
         if ($method) {
-            return (string) $control->{$method}();
+            return $control->{$method}();
         }
 
-        return (string) $control->textInput();
+        return $control->textInput();
     }
 
-    public function fields2string($fields, $form, $model) {
-        $str = '';
-        foreach ($fields as $field) {
-            $str .= $this->field2string($field, $form, $model);
+    protected function _splitOptions(&$options, $publicProperties) {
+        $activeFieldOptions = [];
+        foreach ($publicProperties as $option) {
+            if (array_key_exists($option, $options)) {
+                $activeFieldOptions[$option] = $options[$option];
+                unset($options[$option]);
+            }
         }
-        return $str;
+
+        return $activeFieldOptions;
+    }
+
+    protected function _receivePublicProperties($form, $model, $field) {
+        $class = null;
+
+        $config = $form->fieldConfig;
+        if (is_array($config) && isset($config['class'])) {
+            $class = $config['class'];
+        } elseif ($config instanceof \Closure) {
+            $config = call_user_func($config, $model, $field);
+            $class = $config['class'];
+        } else {
+            $class = $form->fieldClass;
+        }
+
+        if (isset(self::$class2publicProperties[$class])) {
+            return self::$class2publicProperties[$class];
+        }
+
+        self::$class2publicProperties[$class] = [];
+
+        $ref = new \ReflectionClass($class);
+        foreach ($ref->getProperties() as $property) {
+            if ($property->isPublic()) {
+                self::$class2publicProperties[$class][] = $property->name;
+            }
+        }
+
+        return self::$class2publicProperties[$class];
+    }
+
+    protected function _hidden2string($control) {
+        return $control->hiddenInput()->parts['{input}'];
+    }
+
+    protected function _staticControl2string($control) {
+        Html::addCssClass($control->options, 'no-required');
+        $control->enableClientValidation = false;
+
+        return $control->staticControl();
     }
 
     public function bindEventsHandler($handler, $event2method) {

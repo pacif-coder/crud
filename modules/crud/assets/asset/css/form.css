@@ -7,6 +7,7 @@ form .hint-block { display: block; margin-top: 5px; color: #999; }
 form .error-summary { color: #a94442; background: #fdf7f7; border-left: 3px solid #eed3d7; padding: 10px 20px; margin: 0 0 15px 0; }
 form .not-set { color: #c55; font-style: italic; }
 form fieldset legend .btn { margin-left: 5px; }
+form fieldset legend input[type="radio"], form fieldset legend input[type="checkbox"] { margin-right: 5px; }
 
 .scroll, .scroll-shot, .scroll-medium { overflow-y: auto; overflow-x: hidden; }
 
