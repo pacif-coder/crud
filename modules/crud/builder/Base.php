@@ -2,15 +2,18 @@
 namespace app\modules\crud\builder;
 
 use Yii;
+use yii\base\Event;
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
 use yii\validators\EmailValidator;
-use yii\base\Event;
+use yii\db\ActiveQueryInterface;
 
 use yii\bootstrap\Html;
 
 use app\modules\crud\controls\CopyMessageCategoryInterface;
+use app\modules\crud\widgets\MaskedInput;
+use app\modules\crud\widgets\FileInput;
 
 use ReflectionClass;
 
@@ -22,9 +25,13 @@ class Base extends \yii\base\Component {
     public $modelClass;
 
     public $fields;
-    public $fieldOptions;
     public $fieldTypes;
     public $type2fields;
+    public $fieldOptions;
+    public $fieldAddClass = [];
+
+    public $readyOnlyFields = [];
+
     public $fieldType2fieldMethod = [
         'textarea' => 'textarea',
         'email' => 'textInput',
@@ -36,16 +43,16 @@ class Base extends \yii\base\Component {
         'hidden' => 'hiddenInput',
     ];
 
-    public $fieldType2widgetOptions = [
-        'phone' => [
-            'mask' => '8 (999) 999 99 99',
-        ],
-    ];
-
     public $fieldType2widget = [
         'date'  => 'yii\jui\DatePicker',
-        'phone' => 'yii\widgets\MaskedInput',
-        'file'  => 'app\modules\crud\widgets\FileInput',
+        'phone' => MaskedInput::class,
+        'file'  => FileInput::class,
+    ];
+
+    public $fieldType2widgetOptions = [
+        'phone' => [
+            'mask' => '7 999 999 99 99',
+        ],
     ];
 
     public $formExtraControls = [];
@@ -54,7 +61,7 @@ class Base extends \yii\base\Component {
     public $removeExtraControls = [];
     public $extraControlOptions = [];
 
-    public $skipColumnsInGrid = [];
+    public $removeColumns = [];
 
     public $enumFields;
     public $enumOptions;
@@ -90,19 +97,26 @@ class Base extends \yii\base\Component {
     const EVENT_AFTER_BUILD = 'afterBuild';
 
     protected $validatorts;
+
+    protected $innerType = [];
+
     protected $enumFieldTypes = ['dropDownList', 'radioList', 'checkboxList', 'select'];
+
     protected $mergeAsArray = [
         'dbType2fieldType',
         'extraControlOptions',
+        'fieldType2widget',
+        'fieldType2widgetOptions',
+        'form',
     ];
-
-    protected $_isExtraControlCreated = false;
-    protected $_extraControlVar;
-    protected $_extraControlsByPlace;
 
     protected static $class2nameAttr = [];
     protected static $class2dbColumns = [];
     protected static $class2publicProperties = [];
+
+    protected $_isExtraControlCreated = false;
+    protected $_extraControlVar;
+    protected $_extraControlsByPlace;
 
     public function static2this($class, $prefix = 'fb_') {
         $ref = new ReflectionClass($class);
@@ -179,9 +193,9 @@ class Base extends \yii\base\Component {
             $columns = array_keys($this->parseColumns($staticAttrs['fb_columns']));
         } else {
             $fields = isset($staticAttrs['fb_fields'])? $staticAttrs['fb_fields'] : null;
-            $skipColumnsInGrid = isset($staticAttrs['fb_skipColumnsInGrid'])? $staticAttrs['fb_skipColumnsInGrid'] : [];
+            $removeColumns = isset($staticAttrs['fb_removeColumns'])? $staticAttrs['fb_removeColumns'] : [];
 
-            $columns = $this->_getDefaultColumns($modelClass, $fields, $skipColumnsInGrid);
+            $columns = $this->_getDefaultColumns($modelClass, $fields, $removeColumns);
         }
 
         $names = array_intersect($this->nameAttrs, $columns);
@@ -226,6 +240,34 @@ class Base extends \yii\base\Component {
         }
     }
 
+    protected function inspectAttr($attr, $model)
+    {
+        if (isset($this->innerType[$attr])) {
+            return;
+        }
+
+        /* @var $model ActiveRecord */
+        $method = "get{$attr}";
+        if ($model->hasMethod($method)) {
+            $query = $model->{$method}();
+            if ($query instanceof ActiveQueryInterface) {
+                $query->via = null;
+                $query->primaryModel = null;
+
+                $this->_enumActiveQueries[$attr] = $query;
+                if (!in_array($attr, $this->enumFields)) {
+                    $this->enumFields[] = $attr;
+                }
+
+                return $this->innerType[$attr] = $query->multiple? 'oneToMany' : 'oneToOne';
+            }
+        }
+
+        if (!isset($this->innerType[$attr])) {
+            $this->innerType[$attr] = false;
+        }
+    }
+
     protected function getControlTypeByValidator($model, $attr) {
         $this->initValidators($model);
         if (!isset($this->validatorts[$attr])) {
@@ -247,6 +289,25 @@ class Base extends \yii\base\Component {
 
             if ($validator instanceof EmailValidator) {
                 return 'email';
+            }
+        }
+    }
+
+    protected function initEnumOptionsByDesc($model, $attr)
+    {
+        $options = $this->enumOptions[$attr];
+        if (is_string($options)) {
+            $options = [$model, $options];
+        }
+
+        if (is_callable($options)) {
+            $this->enumOptions[$attr] = call_user_func($options, $this);
+        } elseif (in_array($attr, $this->translationEnumOptions)) {
+            $keys = $this->enumOptions[$attr];
+
+            $this->enumOptions[$attr] = [];
+            foreach ($keys as $key) {
+                $this->enumOptions[$attr][$key] = Yii::t($this->messageCategory, "enum option {$key}");
             }
         }
     }
@@ -297,14 +358,14 @@ class Base extends \yii\base\Component {
         return $result;
     }
 
-    protected function _getDefaultColumns($modelClass, $fields, $skipColumnsInGrid) {
+    protected function _getDefaultColumns($modelClass, $fields, $removeColumns) {
         if ($fields) {
-            return array_diff($fields, $skipColumnsInGrid);
+            return array_diff($fields, $removeColumns);
         }
 
         $keys = $modelClass::primaryKey();
         $columns = array_keys($this->getDBColumns($modelClass));
-        return array_diff($columns, $keys, $skipColumnsInGrid);
+        return array_diff($columns, $keys, $removeColumns);
     }
 
     protected function parseColumnDesc($text) {
@@ -336,6 +397,7 @@ class Base extends \yii\base\Component {
         $this->_extraControlsByPlace = null;
 
         $extraControlVar = "{$this->_extraControlVar}ExtraControls";
+
         $extraControls = array_merge($this->{$extraControlVar}, $this->addExtraControls);
         foreach ($extraControls as $i => $control) {
             if (in_array($control, $this->removeExtraControls)) {
@@ -477,8 +539,19 @@ class Base extends \yii\base\Component {
                 break;
         }
 
+        $fieldOptions = isset($this->fieldOptions[$field])? $this->fieldOptions[$field] : [];
+
+        // special case - boolean data is output only for reads
+        // use booleanFormat in formatter
+        if (in_array($field, $this->readyOnlyFields) && 'boolean' == $type &&
+                !array_key_exists('value', $fieldOptions)) {
+
+            $value = empty($model->{$field})? 0 : $model->{$field};
+            $fieldOptions['value'] = Yii::$app->formatter->booleanFormat[$value];
+            $type = 'staticControl';
+        }
+
         $typeOptions = isset($this->fieldType2widgetOptions[$type])? $this->fieldType2widgetOptions[$type] : [];
-        $fieldOptions = isset($this->fieldOptions[$field]) ? $this->fieldOptions[$field] : [];
         $options = array_merge($typeOptions, $fieldOptions);
 
         /* @var $control \yii\bootstrap\ActiveField */
@@ -486,9 +559,24 @@ class Base extends \yii\base\Component {
         $activeFieldOptions = $this->_splitOptions($options, $publicProperties);
         $control = $form->field($model, $field, $activeFieldOptions);
 
+        if (isset($this->fieldAddClass[$field])) {
+            Html::addCssClass($control->options, $this->fieldAddClass[$field]);
+        }
+
+        $isEnum = false;
+        $items = null;
+        if (in_array($field, $this->enumFields) || isset($this->enumOptions[$field])) {
+            $isEnum = true;
+            $items = isset($this->enumOptions[$field])? $this->enumOptions[$field] : [];
+        }
+
         $widget = isset($this->fieldType2widget[$type])? $this->fieldType2widget[$type] : null;
         if ($widget) {
-            return $control->widget($widget, $options? $options : null);
+            if ($isEnum) {
+                $options['items'] = $items;
+            }
+
+            return (string) $control->widget($widget, $options);
         }
 
         $innerMethod = "_{$type}2string";
@@ -497,16 +585,14 @@ class Base extends \yii\base\Component {
         }
 
         $method = isset($this->fieldType2fieldMethod[$type])? $this->fieldType2fieldMethod[$type] : null;
-
-        if (in_array($field, $this->enumFields) || isset($this->enumOptions[$field])) {
-            $items = isset($this->enumOptions[$field])? $this->enumOptions[$field] : [];
+        if ($isEnum) {
             if ($method) {
                 return $control->{$method}($items);
             }
         }
 
         if ($method) {
-            return $control->{$method}();
+            return $control->{$method}($options);
         }
 
         return $control->textInput();
@@ -557,11 +643,11 @@ class Base extends \yii\base\Component {
         return $control->hiddenInput()->parts['{input}'];
     }
 
-    protected function _staticControl2string($control) {
+    protected function _staticControl2string($control, $options) {
         Html::addCssClass($control->options, 'no-required');
         $control->enableClientValidation = false;
 
-        return $control->staticControl();
+        return $control->staticControl($options);
     }
 
     public function bindEventsHandler($handler, $event2method) {

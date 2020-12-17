@@ -1,26 +1,33 @@
 <?php
 use yii\bootstrap\Html;
 ?>
-
-<h1 class="main-title">
-    <?= preg_replace('/&quot;(.*?)&quot;/', '<span>$1</span>', Html::encode($this->title)) ?>
-
+<div class="main-title">
     <?php
     if (($buttons = $builder->extraControlsByPlace('title'))) {
-        ?>
-        <div class="pull-right"><?= $buttons ?></div>
-        <?php
+        echo Html::tag('div', $buttons, ['class' => 'pull-right']);
     }
     ?>
-</h1>
+
+    <h1>
+        <?php
+        if (false !== strpos($this->title, '«') or false !== strpos($this->title, '»')) {
+            $template = '<span>$1</span>';
+        } else {
+            $template = '<span class="with-quota">$1</span>';
+        }
+
+        echo preg_replace('/&quot;(.*)&quot;/', $template, Html::encode($this->title));
+        ?>
+    </h1>
+</div>
 
 <?php
-    foreach (Yii::$app->session->getAllFlashes() as $key => $message) {
-        ?>
-            <div class="alert alert-<?= $key ?>">
-                <?= Html::icon('remove-sign') ?>
-                <?= nl2br($message) ?>
-            </div>
-        <?php
-    }
+foreach (Yii::$app->session->getAllFlashes() as $key => $message) {
+    ?>
+        <div class="alert alert-<?=$key?>">
+            <?=Html::icon('remove-sign')?>
+            <?=nl2br($message)?>
+        </div>
+    <?php
+}
 ?>

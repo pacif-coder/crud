@@ -5,7 +5,6 @@ use Yii;
 use yii\db\ActiveRecord;
 use yii\base\InvalidConfigException;
 use yii\db\ActiveQuery;
-use yii\db\ActiveQueryInterface;
 use yii\helpers\ArrayHelper;
 
 use app\modules\crud\builder\Base;
@@ -17,21 +16,20 @@ use Exception;
  *
  */
 class FormBuilder extends Base {
-    public $formExtraControls = ['save', 'cancel'];
-
     public $fieldset2fields;
     public $fieldsetLegends = [];
     public $fieldsetAttrs = [];
     public $fieldsBeforeFieldsetLegend = [];
     public $fieldsAfterFieldsetLegend = [];
 
-    protected $_enumActiveQueries = [];
+    public $formExtraControls = ['save', 'cancel'];
 
     public $form = [
         'class' => 'yii\bootstrap\ActiveForm',
         'layout' => 'horizontal',
     ];
 
+    protected $_enumActiveQueries = [];
     protected $_extraControlVar = 'form';
 
     public function controller2this($controller) {
@@ -81,7 +79,7 @@ class FormBuilder extends Base {
             $notRule = array_diff($this->fields, $allows);
             if ($notRule) {
                 $notRule = implode("', '", $notRule);
-                throw new InvalidConfigException("No exist rules on '{$notRule}' fields");
+                //throw new InvalidConfigException("No exist rules on '{$notRule}' fields");
             }
         }
 
@@ -92,7 +90,7 @@ class FormBuilder extends Base {
             }
 
             $this->fieldTypes[$field] = $type;
-            if (in_array($type, $this->enumFieldTypes) || in_array($field, $this->enumFields)) {
+            if (in_array($type, $this->enumFieldTypes) || in_array($field, $this->enumFields) || isset($this->enumOptions[$field])) {
                 $this->initEnumOptions($model, $field);
             }
         }
@@ -110,21 +108,7 @@ class FormBuilder extends Base {
         }
 
         if (isset($this->enumOptions[$attr])) {
-            $options = $this->enumOptions[$attr];
-            if (is_string($options)) {
-                $options = [$model, $options];
-            }
-
-            if (is_callable($options)) {
-                $this->enumOptions[$attr] = call_user_func($options, $this);
-            } elseif (in_array($attr, $this->translationEnumOptions) ){
-                $keys = $this->enumOptions[$attr];
-
-                $this->enumOptions[$attr] = [];
-                foreach ($keys as $key) {
-                    $this->enumOptions[$attr][$key] = Yii::t($this->messageCategory, "enum option {$key}");
-                }
-            }
+            $this->initEnumOptionsByDesc($model, $attr);
         } elseif (isset($this->_enumActiveQueries[$attr])) {
             /*@var $query ActiveQuery */
             $query = $this->_enumActiveQueries[$attr];
@@ -160,22 +144,25 @@ class FormBuilder extends Base {
     }
 
     protected function getType($attr, $model) {
+        $this->inspectAttr($attr, $model);
+
         if (isset($this->fieldTypes[$attr])) {
             return $this->fieldTypes[$attr];
         }
 
-        /* @var $model ActiveRecord */
-        $method = "get{$attr}";
-        if ($model->hasMethod($method)) {
-            $query = $model->{$method}();
-            if ($query instanceof ActiveQueryInterface) {
-                $query->via = null;
-                $query->primaryModel = null;
+        $type = null;
+        switch ($this->innerType[$attr]) {
+            case 'oneToMany':
+                $type = 'checkboxList';
+                break;
 
-                $this->_enumActiveQueries[$attr] = $query;
+            case 'oneToOne':
+                $type = 'select';
+                break;
+        }
 
-                return $query->multiple? 'checkboxList' : 'select';
-            }
+        if (null !== $type) {
+            return $type;
         }
 
         if (null !== ($type = $this->getControlTypeByDBColumn($attr))) {
@@ -186,7 +173,7 @@ class FormBuilder extends Base {
             return $type;
         }
 
-        if (in_array($attr, $this->enumFields)) {
+        if (in_array($attr, $this->enumFields) || isset($this->enumOptions[$attr])) {
             return 'select';
         }
 

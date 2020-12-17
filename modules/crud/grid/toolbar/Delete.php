@@ -2,26 +2,27 @@
 namespace app\modules\crud\grid\toolbar;
 
 use Yii;
-use yii\helpers\Html;
 
 use app\modules\crud\grid\toolbar\SendFormButton;
-use yii\web\Request;
 
 /**
- * Description of Delete
+ * Delete button
  *
  */
-class Delete extends SendFormButton {
+class Delete extends SendFormButton
+{
     public $action = 'delete';
     public $label = 'Delete';
     public $colorClass = 'btn-danger';
     public $icon = 'remove';
-
     public $messageCategory = 'yii';
 
-    public function getAttrs() {
+    protected static $message = 'Are you sure you want to delete this item?';
+
+    public function getAttrs()
+    {
         $attrs = parent::getAttrs();
-        $attrs['data-confirm-message'] = Yii::t($this->messageCategory, 'Are you sure you want to delete this item?');
+        $attrs['data-confirm-message'] = Yii::t($this->messageCategory, self::$message);
 
         return $attrs;
     }

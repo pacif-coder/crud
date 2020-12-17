@@ -12,6 +12,11 @@ $(document).ready(function () {
             return;
         }
 
+        if ($(this).data('isInsideForm')) {
+            $(grid).parents('form').attr('action', $(this).data('url')).submit();
+            return;
+        }        
+
         var form = $("<form/>", {
             'action': $(this).data('url'),
             'method': 'post',

@@ -6,14 +6,14 @@ use yii\bootstrap\Html;
 use app\modules\crud\helpers\ClassI18N;
 use yii\web\Request;
 use yii\helpers\ArrayHelper;
-
 use ReflectionClass;
 
 /**
  * @XXX
  *
  */
-class Base extends \yii\base\BaseObject {
+class Base extends \yii\base\BaseObject
+{
     public $align;
 
     public $label = '';
@@ -32,7 +32,8 @@ class Base extends \yii\base\BaseObject {
 
     public $options = [];
 
-    public function init() {
+    public function init()
+    {
         parent::init();
 
         if (!$this->messageCategory) {
@@ -40,7 +41,8 @@ class Base extends \yii\base\BaseObject {
         }
     }
 
-    public function getContent() {
+    public function getContent()
+    {
         $content = '';
         if ($this->icon) {
             $content .= Html::icon($this->icon) . ' ';
@@ -56,11 +58,21 @@ class Base extends \yii\base\BaseObject {
         return $content;
     }
 
-    public function html() {
-        return Html::button($this->getContent(), $this->getAttrs());
+    public function html()
+    {
+        $atrrs = $this->getAttrs();
+        foreach ($atrrs as $atrr => $value) {
+            if (is_bool($value)) {
+                $value = ($value) ? 1 : 0;
+                $atrrs[$atrr] = $value;
+            }
+        }
+
+        return Html::button($this->getContent(), $atrrs);
     }
 
-    public function getAttrs() {
+    public function getAttrs()
+    {
         $attrs = $this->options;
         Html::addCssClass($attrs, $this->baseClass);
         Html::addCssClass($attrs, $this->colorClass);
@@ -69,7 +81,9 @@ class Base extends \yii\base\BaseObject {
         return $attrs;
     }
 
-    public function __toString() {
+    public function __toString()
+    {
         return $this->html();
     }
+
 }

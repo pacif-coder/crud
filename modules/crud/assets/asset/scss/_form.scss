@@ -58,6 +58,20 @@ form {
         .btn {margin-left: 5px;}
         input[type="radio"], input[type="checkbox"] {margin-right: 5px;}
     }
+    
+    .form-group {
+        &.short textarea {
+            min-height: 100px;
+        }
+
+        &.medium textarea {
+            min-height: 250px;
+        }        
+        
+        &.high textarea {
+            min-height: 500px;
+        }                
+    } 
 }
 
 .scroll, .scroll-shot, .scroll-medium {

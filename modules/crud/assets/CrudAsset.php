@@ -10,8 +10,7 @@ class CrudAsset extends AssetBundle {
     public $sourcePath = __DIR__ . '/asset/css';
 
     public $css = [
-        'page.css',
-        'form.css',
+        'all.css',
     ];
 
     public $depends = [

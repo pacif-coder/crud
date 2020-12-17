@@ -6,10 +6,10 @@ use yii\grid\GridView as BaseGridView;
 use yii\grid\GridViewAsset as BaseGridViewAsset;
 use yii\widgets\BaseListView;
 use yii\helpers\Json;
+use yii\helpers\Html;
 
 use app\modules\crud\grid\GridViewAsset;
 use app\modules\crud\grid\toolbar\GridToolbarButtonAsset;
-
 
 /**
  *
@@ -32,6 +32,12 @@ class GridView extends BaseGridView {
     public $addToolbarButtons = [];
     public $removeToolbarButtons = [];
     public $toolbarButtonOptions = [];
+
+    public $isInsideForm;
+    public $surroundForm;
+    public $surroundFormAction = '';
+    public $surroundFormMethod = 'post';
+    public $surroundFormOptions = [];
 
     protected function initColumns() {
         $isGuessColumn = empty($this->columns);
@@ -92,9 +98,26 @@ class GridView extends BaseGridView {
         switch ($name) {
             case '{toolbar}':
                 return $this->renderToolbar();
+
             default:
                 return parent::renderSection($name);
         }
+    }
+
+    public function renderTableBody(): string {
+        $body = parent::renderTableBody();
+        if (!$this->surroundForm) {
+            return $body;
+        }
+
+        $str = Html::beginForm($this->surroundFormAction,
+                        $this->surroundFormMethod,
+                        $this->surroundFormOptions);
+
+        $str .= $body;
+        $str .= Html::endForm();
+
+        return $str;
     }
 
     public function renderToolbar() {

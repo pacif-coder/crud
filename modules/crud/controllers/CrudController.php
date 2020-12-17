@@ -70,7 +70,7 @@ class CrudController extends Controller {
             $this->messageCategory = ClassI18N::class2messagesPath($this->modelClass);
         }
 
-        $view = parent::getView();
+        $view = $this->getView();
 
         if ($this->defaultAsset) {
             $view->registerAssetBundle($this->defaultAsset);
@@ -84,7 +84,7 @@ class CrudController extends Controller {
     }
 
     protected function mapFakeTheme() {
-        $view = parent::getView();
+        $view = $this->getView();
 
         $crudModule = new CrudModule('crud');
         $crudViewPath = $crudModule->getViewPath() . DIRECTORY_SEPARATOR . $crudModule->defaultRoute;
@@ -105,9 +105,6 @@ class CrudController extends Controller {
      * @return string
      */
     public function actionIndex() {
-        $view = $this->getView();
-        $view->title = Yii::t($this->messageCategory, 'List items');
-
         $builder = $this->getGridBuilder();
 
         // call controller event callback
@@ -115,6 +112,8 @@ class CrudController extends Controller {
 
         // build grid description
         $builder->build();
+
+        $this->createIndexTitle();
 
         return $this->render('index', compact(['builder']));
     }
@@ -153,6 +152,22 @@ class CrudController extends Controller {
     }
 
     /**
+     * Show an existing model object.
+     * If update is successful, the browser will be redirected to the 'back' url page.
+     * @param string $id
+     * @return mixed
+     * @throws NotFoundHttpException if the model cannot be found
+     */
+    public function actionRead($id) {
+        $model = $this->findModel($id);
+        $builder = $this->getFromBuilder();
+
+        $this->createReadTitle();
+
+        return $this->render('read', compact(['model', 'builder']));
+    }
+
+    /**
      * Create and edit object nodel
      * @param string $id
      * @return mixed
@@ -160,6 +175,9 @@ class CrudController extends Controller {
      */
     protected function _actionEdit($id = null) {
         $model = $this->findModel($id);
+
+        $builder = $this->getFromBuilder();
+        $this->createForm($model);
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->goBack();
@@ -169,9 +187,6 @@ class CrudController extends Controller {
 
         $this->createEditTitle($id, $model);
 
-        $this->createForm($model);
-
-        $builder = $this->getFromBuilder();
         return $this->render('edit', compact(['model', 'builder']));
     }
 
@@ -204,13 +219,32 @@ class CrudController extends Controller {
         }
     }
 
+    protected function createReadTitle() {
+        $view = $this->getView();
+        $builder = $this->getFromBuilder();
+
+        if ($builder->nameAttr) {
+            $name = $builder->nameAttr;
+            $view->title = Yii::t($this->messageCategory, 'Show item "{nameAttribute}"', ['nameAttribute' => $model->{$name}]);
+        } else {
+            $view->title = Yii::t($this->messageCategory, 'Show item');
+        }
+    }
+
+    protected function createIndexTitle() {
+        $view = $this->getView();
+        $view->title = Yii::t($this->messageCategory, 'List items');
+    }
+
     protected function addParentToBreadcrumbs() {
+        $this->addToBreadcrumbs($this->getBackUrl(),
+                Yii::t($this->messageCategory, 'List items'));
+    }
+
+    protected function addToBreadcrumbs($url, $label) {
         $view = $this->getView();
 
-        $view->params['breadcrumbs'][] = [
-            'url' => $this->getBackUrl(),
-            'label' => Yii::t($this->messageCategory, 'List items'),
-        ];
+        $view->params['breadcrumbs'][] = ['url' => $url, 'label' => $label];
     }
 
     protected function getFromBuilder($withCopy = true) {

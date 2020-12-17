@@ -2,13 +2,13 @@
 namespace app\modules\crud\builder;
 
 use Yii;
-use yii\data\ActiveDataProvider;
 use yii\base\Event;
+use yii\data\ActiveDataProvider;
+use yii\validators\ExistValidator;
 
 use app\modules\crud\builder\Base;
 use app\modules\crud\grid\column\ActionLinkColumn;
 use app\modules\crud\grid\FilterModel;
-use yii\validators\ExistValidator;
 
 /**
  * XXX
@@ -25,6 +25,12 @@ class GridBuilder extends Base {
     public $addToolbarButtons = [];
     public $removeToolbarButtons = [];
     public $toolbarButtonOptions = [];
+
+    public $isInsideForm;
+    public $surroundForm;
+    public $surroundFormAction = '';
+    public $surroundFormMethod = 'post';
+    public $surroundFormOptions = [];
 
     public $gridExtraControls = ['create'];
 
@@ -99,10 +105,15 @@ class GridBuilder extends Base {
         $this->autoJoin();
         $this->selectInFilter();
 
+        // define filter operator
         $dbColumns = $this->getDBColumns($this->modelClass);
         foreach ($this->columns as $desc) {
             $attr = isset($desc['attribute'])? $desc['attribute'] : null;
             if (null === $attr) {
+                continue;
+            }
+
+            if (isset($this->filterAttrOperator[$attr])) {
                 continue;
             }
 
@@ -121,6 +132,7 @@ class GridBuilder extends Base {
             }
         }
 
+        // define column format
         foreach ($this->columns as $column => $desc) {
             if (isset($desc['format'])) {
                 continue;
@@ -225,6 +237,12 @@ class GridBuilder extends Base {
         $this->gridOptions['removeToolbarButtons'] = $this->removeToolbarButtons;
         $this->gridOptions['toolbarButtonOptions'] = $this->toolbarButtonOptions;
         $this->gridOptions['dataProvider'] = $this->getProvider();
+
+        $this->gridOptions['isInsideForm'] = $this->isInsideForm;
+        $this->gridOptions['surroundForm'] = $this->surroundForm;
+        $this->gridOptions['surroundFormAction'] = $this->surroundFormAction;
+        $this->gridOptions['surroundFormMethod'] = $this->surroundFormMethod;
+        $this->gridOptions['surroundFormOptions'] = $this->surroundFormOptions;
 
         if ($this->filterModel && $this->filterInGrid) {
             $this->gridOptions['filterModel'] = $this->filterModel;
@@ -374,6 +392,18 @@ class GridBuilder extends Base {
             }
         }
 
+        // enum value in column
+        if (isset($this->enumOptions[$attr])) {
+            $this->initEnumOptionsByDesc($this->_model, $attr);
+            $options = $this->enumOptions[$attr];
+            $emptyLabel = $this->emptyEnumOptionLabel;
+
+            return function ($value, $formatter) use ($options, $emptyLabel) {
+                $value = isset($options[$value])? $options[$value] : $emptyLabel;
+                return $formatter->asText($value);
+            };
+        }
+
         return 'text';
     }
 
@@ -400,7 +430,7 @@ class GridBuilder extends Base {
             return;
         }
 
-        $desc['class'] = ActionLinkColumn::className();
+        $desc['class'] = ActionLinkColumn::class;
         $this->columns[$targetColumn] = $desc;
     }
 
@@ -413,7 +443,7 @@ class GridBuilder extends Base {
     }
 
     protected function getDefaultColumns($modelClass) {
-        return $this->_getDefaultColumns($modelClass, $this->fields, $this->skipColumnsInGrid);
+        return $this->_getDefaultColumns($modelClass, $this->fields, $this->removeColumns);
     }
 
     protected function beforeFilterApply() {

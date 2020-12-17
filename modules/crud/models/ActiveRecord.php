@@ -12,7 +12,8 @@ class ActiveRecord extends \yii\db\ActiveRecord {
     /**
      * @inheritdoc
      */
-    public function attributeLabels() {
+    public function attributeLabels()
+    {
         $file = ClassI18N::class2messagesPath(static::class);
 
         $list = [];
