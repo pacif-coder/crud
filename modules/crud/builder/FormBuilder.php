@@ -6,6 +6,7 @@ use yii\db\ActiveRecord;
 use yii\base\InvalidConfigException;
 use yii\db\ActiveQuery;
 use yii\helpers\ArrayHelper;
+use yii\bootstrap\ActiveForm;
 
 use app\modules\crud\builder\Base;
 
@@ -25,7 +26,7 @@ class FormBuilder extends Base {
     public $formExtraControls = ['save', 'cancel'];
 
     public $form = [
-        'class' => 'yii\bootstrap\ActiveForm',
+        'class' => ActiveForm::class,
         'layout' => 'horizontal',
     ];
 

@@ -595,7 +595,7 @@ class Base extends \yii\base\Component {
             return $control->{$method}($options);
         }
 
-        return $control->textInput();
+        return $control->textInput($options);
     }
 
     protected function _splitOptions(&$options, $publicProperties) {
