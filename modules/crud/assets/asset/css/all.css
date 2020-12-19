@@ -1,4 +1,4 @@
-form label.control-label { color: #0000008f; }
+form label.control-label { color: #989898; }
 form .required label.control-label { margin-right: 0; }
 form .required label.control-label::before { content: '*'; color: #ff0000; font-size: 13px; line-height: 12px; margin-right: 5px; font-family: monospace; position: relative; top: -5px; }
 form .required.no-required label.control-label::before { content: ''; margin-right: 0; }
@@ -38,3 +38,11 @@ form .form-group.high textarea { min-height: 500px; }
 .main-title h1 > span.with-quota:after { content: "\00BB"; }
 .main-title h1 > span.with-quota:before { content: "\00AB"; }
 .main-title .btn + .btn { margin-left: 5px; }
+
+.mb-5 { margin-bottom: 5px; }
+
+.ml-5 { margin-left: 5px; }
+
+.mr-5 { margin-right: 5px; }
+
+.mt-5 { margin-top: 5px; }
