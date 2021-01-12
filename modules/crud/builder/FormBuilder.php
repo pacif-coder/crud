@@ -9,6 +9,7 @@ use yii\helpers\ArrayHelper;
 use yii\bootstrap\ActiveForm;
 
 use app\modules\crud\builder\Base;
+use app\modules\crud\helpers\ModelName;
 
 use Exception;
 
@@ -16,7 +17,12 @@ use Exception;
  * XXX
  *
  */
-class FormBuilder extends Base {
+class FormBuilder extends Base
+{
+    public $removeFields = [];
+
+    public $fieldHint = [];
+
     public $fieldset2fields;
     public $fieldsetLegends = [];
     public $fieldsetAttrs = [];
@@ -28,21 +34,26 @@ class FormBuilder extends Base {
     public $form = [
         'class' => ActiveForm::class,
         'layout' => 'horizontal',
+
+        'fieldConfig' => [
+            'hintOptions' => [
+                'tag' => 'div',
+            ],
+        ],
     ];
 
     protected $_enumActiveQueries = [];
+
     protected $_extraControlVar = 'form';
 
-    public function controller2this($controller) {
-        if (isset($controller->modelClass)) {
-            $this->static2this($controller->modelClass, 'fb_');
-        }
-
-        $this->object2this($controller);
-    }
-
-    public function build(ActiveRecord $model) {
+    public function build(ActiveRecord $model)
+    {
         $this->_enumActiveQueries = [];
+
+        $modelClass = get_class($model);
+        if ($modelClass != $this->modelClass) {
+            $this->setModelClass($modelClass);
+        }
 
         $this->_isExtraControlCreated = false;
         foreach (['fieldTypes', 'type2fields', 'fieldOptions', 'enumFields'] as $param) {
@@ -61,8 +72,6 @@ class FormBuilder extends Base {
             }
         }
 
-        $this->modelClass = get_class($model);
-
         $this->beforeBuild();
         $this->initNameAttr();
 
@@ -72,10 +81,12 @@ class FormBuilder extends Base {
                 $allows[] = $attr;
             }
         }
+        $allows = array_merge($allows, $this->subObjects);
 
         if (null === $this->fields) {
-            $attrs = array_intersect($model->attributes(), $allows);
-            $this->fields = array_diff($attrs, $this->modelClass::primaryKey());
+            $this->fields = array_intersect($model->attributes(), $allows);
+            $this->fields = array_diff($this->fields, $this->modelClass::primaryKey());
+            $this->fields = array_diff($this->fields, $this->removeFields);
         } else {
             $notRule = array_diff($this->fields, $allows);
             if ($notRule) {
@@ -103,7 +114,33 @@ class FormBuilder extends Base {
         $this->extraControlsToPlace();
     }
 
-    protected function initEnumOptions($model, $attr) {
+    public function data2model($data, $model)
+    {
+        if (!is_array($data) || !$data) {
+            return false;
+        }
+
+        $skipDataFields = array_merge($this->readyOnlyFields, $this->removeFields);
+        foreach ($this->fieldTypes as $field => $type) {
+            if ('static' == $type || 'staticControl' == $type) {
+                $skipDataFields[] = $field;
+            }
+        }
+
+        $formName = $model->formName();
+        if ($skipDataFields && isset($data[$formName])) {
+            foreach ($skipDataFields as $field) {
+                if (array_key_exists($field, $data[$formName])) {
+                    unset($data[$formName][$field]);
+                }
+            }
+        }
+
+        return $model->load($data) && $model->save();
+    }
+
+    protected function initEnumOptions($model, $attr)
+    {
         if (!in_array($attr, $this->enumFields)) {
             $this->enumFields[] = $attr;
         }
@@ -120,7 +157,7 @@ class FormBuilder extends Base {
                 throw new Exception('Not support');
             }
 
-            $nameAttr = $this->_getNameAttr($class);
+            $nameAttr = ModelName::getNameAttr($class);
             if (!$nameAttr) {
                 throw new Exception("Model '{$class}' mast have 'name' attr");
             }
@@ -135,7 +172,8 @@ class FormBuilder extends Base {
         }
     }
 
-    public function isAddEmptyEnumOption($attr) {
+    public function isAddEmptyEnumOption($attr)
+    {
         if (!$this->addEmptyEnumOption) {
             return false;
         }
@@ -144,7 +182,8 @@ class FormBuilder extends Base {
         return in_array($type, ['select', 'dropDownList']);
     }
 
-    protected function getType($attr, $model) {
+    protected function getType($attr, $model)
+    {
         $this->inspectAttr($attr, $model);
 
         if (isset($this->fieldTypes[$attr])) {
@@ -181,7 +220,8 @@ class FormBuilder extends Base {
         return $this->uptakeType($attr);
     }
 
-    protected function uptakeType($attr) {
+    protected function uptakeType($attr)
+    {
         if (!$this->uptake) {
             return;
         }
@@ -195,9 +235,14 @@ class FormBuilder extends Base {
         }
     }
 
-    public function getNotFieldsetFields() {
+    public function getNotFieldsetFields()
+    {
         $notInFieldSets = $this->fields;
         foreach ($this->fieldset2fields as $fieldSet => $fields) {
+            if (is_string($fields)) {
+                $fields = preg_split('/\s+/', trim($fields));
+            }
+
             $notInFieldSets = array_diff($notInFieldSets, $fields);
 
             $fields = array_intersect($fields, $this->fields);
@@ -211,7 +256,8 @@ class FormBuilder extends Base {
         return $notInFieldSets;
     }
 
-    public function fieldsBeforeFieldsetLegend2string($fieldset, $form, $model) {
+    public function fieldsBeforeFieldsetLegend2string($fieldset, $form, $model)
+    {
         if (!isset($this->fieldset2fields[$fieldset]) || !isset($this->fieldsBeforeFieldsetLegend[$fieldset])) {
             return '';
         }
@@ -220,7 +266,8 @@ class FormBuilder extends Base {
         return $this->_fieldsInput2string($fields, $form, $model);
     }
 
-    public function fieldsAfterFieldsetLegend2string($fieldset, $form, $model) {
+    public function fieldsAfterFieldsetLegend2string($fieldset, $form, $model)
+    {
         if (!isset($this->fieldset2fields[$fieldset]) || !isset($this->fieldsAfterFieldsetLegend[$fieldset])) {
             return '';
         }
@@ -229,7 +276,8 @@ class FormBuilder extends Base {
         return $this->_fieldsInput2string($fields, $form, $model);
     }
 
-    protected function _fieldsInput2string($fields, $form, $model) {
+    protected function _fieldsInput2string($fields, $form, $model)
+    {
         $str = '';
         foreach ($fields as $field) {
             $str .= $this->field2string($field, $form, $model)->parts['{input}'];
@@ -237,7 +285,8 @@ class FormBuilder extends Base {
         return $str;
     }
 
-    public function skipFieldsetLegendFields($fieldset, $fields) {
+    public function skipFieldsetLegendFields($fieldset, $fields)
+    {
         if (isset($this->fieldsBeforeFieldsetLegend[$fieldset])) {
             $fields = array_diff($fields, $this->fieldsBeforeFieldsetLegend[$fieldset]);
         }
@@ -249,7 +298,8 @@ class FormBuilder extends Base {
         return $fields;
     }
 
-    public function getFieldsetLegend($fieldset) {
+    public function getFieldsetLegend($fieldset)
+    {
         if (isset($this->fieldsetLegends[$fieldset])) {
             return $this->fieldsetLegends[$fieldset];
         }
@@ -257,7 +307,8 @@ class FormBuilder extends Base {
         return Yii::t($this->messageCategory, $fieldset);
     }
 
-    public function getFormClass() {
+    public function getFormClass()
+    {
         if (is_string($this->form)) {
             return $this->form;
         }
@@ -265,7 +316,8 @@ class FormBuilder extends Base {
         return $this->form['class'];
     }
 
-    public function getFormConfig() {
+    public function getFormConfig()
+    {
         if (is_string($this->form)) {
             return [];
         }

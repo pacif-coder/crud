@@ -7,8 +7,11 @@ use yii\data\ActiveDataProvider;
 use yii\validators\ExistValidator;
 
 use app\modules\crud\builder\Base;
+use app\modules\crud\models\ModelWithParentInterface;
 use app\modules\crud\grid\column\ActionLinkColumn;
 use app\modules\crud\grid\FilterModel;
+use app\modules\crud\helpers\ModelName;
+use app\modules\crud\helpers\ParentModel;
 
 /**
  * XXX
@@ -18,7 +21,10 @@ class GridBuilder extends Base {
     public $columns;
     public $columnFormats;
 
-    public $gridDefaultOrder;
+    public $addColumnsAfter = [];
+
+    public $defaultOrder;
+    public $pageSize;
     public $gridWithEditLink = true;
     public $gridOptions = [];
 
@@ -33,6 +39,8 @@ class GridBuilder extends Base {
     public $surroundFormOptions = [];
 
     public $gridExtraControls = ['create'];
+
+    public $parentModelID;
 
     // Filter part
     public $withFilter = false;
@@ -68,20 +76,6 @@ class GridBuilder extends Base {
 
     protected $_extraControlVar = 'grid';
 
-    public function controller2this($controller) {
-        if (isset($controller->modelClass)) {
-            $this->setModelClass($controller->modelClass);
-        }
-
-        $this->object2this($controller);
-    }
-
-    public function setModelClass($modelClass) {
-        $this->modelClass = $modelClass;
-
-        $this->static2this($modelClass, 'fb_');
-    }
-
     public function build($modelClass = null) {
         $this->_isExtraControlCreated = false;
         $this->_transformSortAttrMap = $this->_transformFilterAttrMap = [];
@@ -100,6 +94,20 @@ class GridBuilder extends Base {
             }
         } else {
             $this->columns = $this->parseColumns($this->columns);
+        }
+
+        $attrInColumns = array_keys($this->columns);
+        foreach ($this->addColumnsAfter as $afterAttr => $columns) {
+            if (!in_array($afterAttr, $attrInColumns)) {
+                continue;
+            }
+
+            $index = array_search($afterAttr, $attrInColumns);
+            if (false === $index) {
+                continue;
+            }
+
+            array_splice($this->columns, $index + 1, 0, [$columns]);
         }
 
         $this->autoJoin();
@@ -199,10 +207,14 @@ class GridBuilder extends Base {
             'query' => $this->getQuery(),
         ];
 
-        if (null !== $this->gridDefaultOrder) {
-            $options['sort']['defaultOrder'] = $this->gridDefaultOrder;
+        if (null !== $this->defaultOrder) {
+            $options['sort']['defaultOrder'] = $this->defaultOrder;
         } elseif ($this->nameAttr) {
             $options['sort']['defaultOrder'] = [$this->nameAttr => SORT_ASC];
+        }
+
+        if (null !== $this->pageSize) {
+            $options['pagination']['pageSize'] = $this->pageSize;
         }
 
         return $this->provider = new ActiveDataProvider($options);
@@ -255,20 +267,30 @@ class GridBuilder extends Base {
      *
      * @return \yii\db\ActiveQuery
      */
-    public function getQuery() {
+    public function getQuery()
+    {
         if ($this->query) {
             return $this->query;
         }
 
         $modelClass = $this->modelClass;
-        return $this->query = $modelClass::find()->asArray(true);
+        $this->query = $modelClass::find()->asArray(true);
+
+        $parentModelAttr = ParentModel::getParentModelAttr($modelClass);
+        if ($parentModelAttr) {
+            $this->query->andWhere([$parentModelAttr => $this->parentModelID]);
+        }
+
+        return $this->query;
     }
 
-    public function setQuery($query) {
+    public function setQuery($query)
+    {
         return $this->query = $query;
     }
 
-    protected function selectInFilter() {
+    protected function selectInFilter()
+    {
         foreach ($this->columns as $column => $desc) {
             $attr = null;
             if (is_array($desc) && isset($desc['attribute'])) {
@@ -300,7 +322,8 @@ class GridBuilder extends Base {
         }
     }
 
-    protected function autoJoin() {
+    protected function autoJoin()
+    {
         if (!$this->autoJoin) {
             return;
         }
@@ -330,11 +353,11 @@ class GridBuilder extends Base {
         }
     }
 
-    protected function linkQueryByExistValidator($validator, $attr) {
+    protected function linkQueryByExistValidator($validator, $attr)
+    {
         /* @var $validator ExistValidator */
         $targetModelClass = $validator->targetClass;
-        $nameAttr = $this->getNameAttr($targetModelClass);
-
+        $nameAttr = ModelName::getNameAttr($targetModelClass);
         if (!$nameAttr) {
             return;
         }
@@ -367,7 +390,8 @@ class GridBuilder extends Base {
         }
     }
 
-    protected function getColumnFormat($attr) {
+    protected function getColumnFormat($attr)
+    {
         if (isset($this->columnFormats[$attr])) {
             return $this->columnFormats[$attr];
         }
@@ -407,7 +431,8 @@ class GridBuilder extends Base {
         return 'text';
     }
 
-    protected function makeGridEditLink() {
+    protected function makeGridEditLink()
+    {
         $targetColumn = null;
         foreach ($this->columns as $column => $desc) {
             $attr = isset($desc['attribute'])? $desc['attribute'] : null;
@@ -434,7 +459,8 @@ class GridBuilder extends Base {
         $this->columns[$targetColumn] = $desc;
     }
 
-    protected function _createTmpModel() {
+    protected function _createTmpModel()
+    {
         if ($this->_model) {
             return;
         }
@@ -442,11 +468,49 @@ class GridBuilder extends Base {
         $this->_model = $this->modelClass::instantiate(null);
     }
 
-    protected function getDefaultColumns($modelClass) {
-        return $this->_getDefaultColumns($modelClass, $this->fields, $this->removeColumns);
+    protected function getDefaultColumns($modelClass)
+    {
+        if ($this->fields) {
+            return array_diff($this->fields, $this->removeColumns);
+        }
+
+        $keys = $modelClass::primaryKey();
+        $columns = array_keys($this->getDBColumns($modelClass));
+        return array_diff($columns, $keys, $this->removeColumns);
     }
 
-    protected function beforeFilterApply() {
+    protected function parseColumns($columns)
+    {
+        $result = [];
+        foreach ($columns as $column => $desc) {
+            if (is_string($desc)) {
+                $result[$desc] = $this->parseColumnDesc($desc);
+            } elseif (!isset($desc['attribute']) && !is_int($column)) {
+                $desc['attribute'] = $column;
+                $result[$column] = $desc;
+            } else {
+                $result[$column] = $desc;
+            }
+        }
+
+        return $result;
+    }
+
+    protected function parseColumnDesc($text)
+    {
+        if (!preg_match('/^([^:]+)(:(\w*))?(:(.*))?$/', $text, $matches)) {
+            throw new InvalidConfigException('The column must be specified in the format of "attribute", "attribute:format" or "attribute:format:label"');
+        }
+
+        return [
+            'attribute' => $matches[1],
+            'format' => isset($matches[3]) ? $matches[3] : null,
+            'label' => isset($matches[5]) ? $matches[5] : null,
+        ];
+    }
+
+    protected function beforeFilterApply()
+    {
         $event = new Event();
         $this->trigger(self::EVENT_BEFORE_FILTER_APPLY, $event);
     }

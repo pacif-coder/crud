@@ -11,9 +11,11 @@ use yii\db\ActiveQueryInterface;
 
 use yii\bootstrap\Html;
 
+use app\modules\crud\models\ModelWithParentInterface;
 use app\modules\crud\controls\CopyMessageCategoryInterface;
 use app\modules\crud\widgets\MaskedInput;
 use app\modules\crud\widgets\FileInput;
+use app\modules\crud\helpers\ModelName;
 
 use ReflectionClass;
 
@@ -71,9 +73,12 @@ class Base extends \yii\base\Component {
 
     public $messageCategory;
 
-    public $uptake = true;
+    public $subObjects = [];
+    public $getSubObjectMethod = 'getSubObject';
+
     public $nameAttr = null;
 
+    public $uptake = true;
     public $phoneAttrs = ['phone', 'tel'];
     public $emailAttrs = ['email'];
     public $nameAttrs = ['name', 'title', 'fio', 'id'];
@@ -110,7 +115,8 @@ class Base extends \yii\base\Component {
         'form',
     ];
 
-    protected static $class2nameAttr = [];
+    protected $subFormBuilders = [];
+
     protected static $class2dbColumns = [];
     protected static $class2publicProperties = [];
 
@@ -118,16 +124,34 @@ class Base extends \yii\base\Component {
     protected $_extraControlVar;
     protected $_extraControlsByPlace;
 
-    public function static2this($class, $prefix = 'fb_') {
+    public function controller2this($controller, $prefix = 'fb_')
+    {
+        if (isset($controller->modelClass)) {
+            $this->setModelClass($controller->modelClass, $prefix);
+        }
+
+        $this->object2this($controller);
+    }
+
+    public function setModelClass($modelClass, $prefix = 'fb_')
+    {
+        $this->modelClass = $modelClass;
+        $this->static2this($modelClass, $prefix);
+    }
+
+    public function static2this($class, $prefix = 'fb_')
+    {
         $ref = new ReflectionClass($class);
         $this->array2this($ref->getStaticProperties(), $prefix);
     }
 
-    public function object2this($object, $prefix = null) {
+    public function object2this($object, $prefix = null)
+    {
         $this->array2this(get_object_vars($object), $prefix);
     }
 
-    protected function array2this($array, $prefix = null) {
+    protected function array2this($array, $prefix = null)
+    {
         if (null !== $prefix) {
             $source = [];
             $len = strlen($prefix);
@@ -154,57 +178,17 @@ class Base extends \yii\base\Component {
         }
     }
 
-    protected function initNameAttr() {
+    protected function initNameAttr()
+    {
         if (null !== $this->nameAttr) {
             return;
         }
 
-        if (($nameAttr = $this->getNameAttr($this->modelClass))) {
-            $this->nameAttr = $nameAttr;
-        }
+        $this->nameAttr = ModelName::getNameAttr($this->modelClass);
     }
 
-    protected function getNameAttr($modelClass) {
-        if (isset(self::$class2nameAttr[$modelClass])) {
-            return self::$class2nameAttr[$modelClass];
-        }
-
-        self::$class2nameAttr[$modelClass] = $this->_getNameAttr($modelClass);
-        return self::$class2nameAttr[$modelClass];
-    }
-
-    protected function _getNameAttr($modelClass) {
-        $ref = new ReflectionClass($modelClass);
-        $staticAttrs = $ref->getStaticProperties();
-        if (isset($staticAttrs['fb_nameAttr'])) {
-            return $staticAttrs['fb_nameAttr'];
-        }
-
-        if (is_a($modelClass, 'app\modules\crud\models\WithNameAttr', true)) {
-            return self::$class2nameAttr[$modelClass] = $modelClass::NAME_ATTR;
-        }
-
-        $uptake = isset($staticAttrs['fb_uptake'])? $staticAttrs['fb_uptake'] : true;
-        if (!$uptake) {
-            return;
-        }
-
-        if (isset($staticAttrs['fb_columns'])) {
-            $columns = array_keys($this->parseColumns($staticAttrs['fb_columns']));
-        } else {
-            $fields = isset($staticAttrs['fb_fields'])? $staticAttrs['fb_fields'] : null;
-            $removeColumns = isset($staticAttrs['fb_removeColumns'])? $staticAttrs['fb_removeColumns'] : [];
-
-            $columns = $this->_getDefaultColumns($modelClass, $fields, $removeColumns);
-        }
-
-        $names = array_intersect($this->nameAttrs, $columns);
-        if ($names) {
-            return reset($names);
-        }
-    }
-
-    protected function getControlTypeByDBColumn($attr) {
+    protected function getControlTypeByDBColumn($attr)
+    {
         $dbColumns = $this->getDBColumns($this->modelClass);
         if (!isset($dbColumns[$attr])) {
             return;
@@ -217,7 +201,8 @@ class Base extends \yii\base\Component {
         }
     }
 
-    protected function getDBColumns($class) {
+    protected function getDBColumns($class)
+    {
         if (isset(self::$class2dbColumns[$class])) {
             return self::$class2dbColumns[$class];
         }
@@ -226,7 +211,8 @@ class Base extends \yii\base\Component {
         return self::$class2dbColumns[$class];
     }
 
-    protected function initValidators($model) {
+    protected function initValidators($model)
+    {
         if (null !== $this->validatorts) {
             return;
         }
@@ -259,7 +245,7 @@ class Base extends \yii\base\Component {
                     $this->enumFields[] = $attr;
                 }
 
-                return $this->innerType[$attr] = $query->multiple? 'oneToMany' : 'oneToOne';
+                return $this->innerType[$attr] = $query->multiple ? 'oneToMany' : 'oneToOne';
             }
         }
 
@@ -268,7 +254,8 @@ class Base extends \yii\base\Component {
         }
     }
 
-    protected function getControlTypeByValidator($model, $attr) {
+    protected function getControlTypeByValidator($model, $attr)
+    {
         $this->initValidators($model);
         if (!isset($this->validatorts[$attr])) {
             return;
@@ -312,7 +299,8 @@ class Base extends \yii\base\Component {
         }
     }
 
-    protected function initEnumOptionsByValidator($model, $attr) {
+    protected function initEnumOptionsByValidator($model, $attr)
+    {
         $this->initValidators($model);
         if (!isset($this->validatorts[$attr])) {
             return;
@@ -325,62 +313,27 @@ class Base extends \yii\base\Component {
         }
     }
 
-    protected function initEnumOptionsByExistValidator($validator, $attr) {
+    protected function initEnumOptionsByExistValidator($validator, $attr)
+    {
         /* @var $validator ExistValidator */
         $this->enumOptions[$attr] = [];
         $this->addEnumOptionsByExistValidator($this->enumOptions[$attr], $validator, $attr);
     }
 
-    protected function addEnumOptionsByExistValidator(&$options, $validator, $attr) {
+    protected function addEnumOptionsByExistValidator(&$options, $validator, $attr)
+    {
         /* @var $validator ExistValidator */
         $targetModelClass = $validator->targetClass;
         $targetModelAttr = $validator->targetAttribute[$attr];
 
-        $nameAttr = $this->getNameAttr($targetModelClass);
+        $nameAttr = ModelName::getNameAttr($targetModelClass);
         foreach ($targetModelClass::find()->orderBy($nameAttr)->all() as $targetModel) {
             $options[$targetModel->{$targetModelAttr}] = $targetModel->{$nameAttr};
         }
     }
 
-    protected function parseColumns($columns) {
-        $result = [];
-        foreach ($columns as $column => $desc) {
-            if (is_string($desc)) {
-                $result[$desc] = $this->parseColumnDesc($desc);
-            } elseif (!isset($desc['attribute']) && !is_int($column)) {
-                $desc['attribute'] = $column;
-                $result[$column] = $desc;
-            } else {
-                $result[$column] = $desc;
-            }
-        }
-
-        return $result;
-    }
-
-    protected function _getDefaultColumns($modelClass, $fields, $removeColumns) {
-        if ($fields) {
-            return array_diff($fields, $removeColumns);
-        }
-
-        $keys = $modelClass::primaryKey();
-        $columns = array_keys($this->getDBColumns($modelClass));
-        return array_diff($columns, $keys, $removeColumns);
-    }
-
-    protected function parseColumnDesc($text) {
-        if (!preg_match('/^([^:]+)(:(\w*))?(:(.*))?$/', $text, $matches)) {
-            throw new InvalidConfigException('The column must be specified in the format of "attribute", "attribute:format" or "attribute:format:label"');
-        }
-
-        return [
-            'attribute' => $matches[1],
-            'format' => isset($matches[3]) ? $matches[3] : null,
-            'label' => isset($matches[5]) ? $matches[5] : null,
-        ];
-    }
-
-    public function dropExtraControls() {
+    public function dropExtraControls()
+    {
         $this->_isExtraControlCreated = false;
         $this->_extraControlsByPlace = null;
     }
@@ -388,7 +341,8 @@ class Base extends \yii\base\Component {
     /**
      * Create buttons in tollbar
      */
-    public function createExtraControls() {
+    public function createExtraControls()
+    {
         if ($this->_isExtraControlCreated) {
             return;
         }
@@ -445,7 +399,8 @@ class Base extends \yii\base\Component {
         }
     }
 
-    protected function extraControlsToPlace() {
+    protected function extraControlsToPlace()
+    {
         $this->createExtraControls();
         if (null !== $this->_extraControlsByPlace) {
             return;
@@ -468,14 +423,16 @@ class Base extends \yii\base\Component {
         }
     }
 
-    public function normalizePlace($place) {
+    public function normalizePlace($place)
+    {
         $place = strtolower($place);
         $place = str_replace('\\', '/', $place);
         $place = preg_replace('/\/+/', '/', $place);
         return preg_replace('/^\/+|\/+$/', '', $place);
     }
 
-    public function isExtraControlExist($place) {
+    public function isExtraControlExist($place)
+    {
         $this->extraControlsToPlace();
 
         $tmp = explode('/', $this->normalizePlace($place));
@@ -492,7 +449,8 @@ class Base extends \yii\base\Component {
         }
     }
 
-    public function extraControlsByPlace($place) {
+    public function extraControlsByPlace($place)
+    {
         $this->extraControlsToPlace();
 
         $tmp = explode('/', $this->normalizePlace($place));
@@ -515,7 +473,8 @@ class Base extends \yii\base\Component {
      * Create string represention of form fields
      * @return string
      */
-    public function fields2string($fields, $form, $model) {
+    public function fields2string($fields, $form, $model)
+    {
         $str = '';
         foreach ($fields as $field) {
             $str .= $this->field2string($field, $form, $model);
@@ -527,7 +486,8 @@ class Base extends \yii\base\Component {
      * Create string represention of form field
      * @return string
      */
-    public function field2string($field, $form, $model) {
+    public function field2string($field, $form, $model)
+    {
         $type = isset($this->fieldTypes[$field]) ? $this->fieldTypes[$field] : null;
         switch ($type) {
             case 'static':
@@ -539,38 +499,44 @@ class Base extends \yii\base\Component {
                 break;
         }
 
-        $fieldOptions = isset($this->fieldOptions[$field])? $this->fieldOptions[$field] : [];
+        $fieldOptions = isset($this->fieldOptions[$field]) ? $this->fieldOptions[$field] : [];
 
         // special case - boolean data is output only for reads
         // use booleanFormat in formatter
         if (in_array($field, $this->readyOnlyFields) && 'boolean' == $type &&
                 !array_key_exists('value', $fieldOptions)) {
 
-            $value = empty($model->{$field})? 0 : $model->{$field};
+            $value = empty($model->{$field}) ? 0 : $model->{$field};
             $fieldOptions['value'] = Yii::$app->formatter->booleanFormat[$value];
             $type = 'staticControl';
         }
 
-        $typeOptions = isset($this->fieldType2widgetOptions[$type])? $this->fieldType2widgetOptions[$type] : [];
+        $typeOptions = isset($this->fieldType2widgetOptions[$type]) ? $this->fieldType2widgetOptions[$type] : [];
         $options = array_merge($typeOptions, $fieldOptions);
 
         /* @var $control \yii\bootstrap\ActiveField */
         $publicProperties = $this->_receivePublicProperties($form, $model, $field);
         $activeFieldOptions = $this->_splitOptions($options, $publicProperties);
+
+        /*@var $control \yii\widgets\ActiveField */
         $control = $form->field($model, $field, $activeFieldOptions);
 
         if (isset($this->fieldAddClass[$field])) {
             Html::addCssClass($control->options, $this->fieldAddClass[$field]);
         }
 
+        if (isset($this->fieldHint[$field])) {
+            $control->hint($this->fieldHint[$field]);
+        }
+
         $isEnum = false;
         $items = null;
         if (in_array($field, $this->enumFields) || isset($this->enumOptions[$field])) {
             $isEnum = true;
-            $items = isset($this->enumOptions[$field])? $this->enumOptions[$field] : [];
+            $items = isset($this->enumOptions[$field]) ? $this->enumOptions[$field] : [];
         }
 
-        $widget = isset($this->fieldType2widget[$type])? $this->fieldType2widget[$type] : null;
+        $widget = isset($this->fieldType2widget[$type]) ? $this->fieldType2widget[$type] : null;
         if ($widget) {
             if ($isEnum) {
                 $options['items'] = $items;
@@ -584,11 +550,9 @@ class Base extends \yii\base\Component {
             return $this->{$innerMethod}($control, $options);
         }
 
-        $method = isset($this->fieldType2fieldMethod[$type])? $this->fieldType2fieldMethod[$type] : null;
-        if ($isEnum) {
-            if ($method) {
-                return $control->{$method}($items);
-            }
+        $method = isset($this->fieldType2fieldMethod[$type]) ? $this->fieldType2fieldMethod[$type] : null;
+        if ($isEnum && $method) {
+            return $control->{$method}($items);
         }
 
         if ($method) {
@@ -598,7 +562,8 @@ class Base extends \yii\base\Component {
         return $control->textInput($options);
     }
 
-    protected function _splitOptions(&$options, $publicProperties) {
+    protected function _splitOptions(&$options, $publicProperties)
+    {
         $activeFieldOptions = [];
         foreach ($publicProperties as $option) {
             if (array_key_exists($option, $options)) {
@@ -610,7 +575,8 @@ class Base extends \yii\base\Component {
         return $activeFieldOptions;
     }
 
-    protected function _receivePublicProperties($form, $model, $field) {
+    protected function _receivePublicProperties($form, $model, $field)
+    {
         $class = null;
 
         $config = $form->fieldConfig;
@@ -629,7 +595,7 @@ class Base extends \yii\base\Component {
 
         self::$class2publicProperties[$class] = [];
 
-        $ref = new \ReflectionClass($class);
+        $ref = new ReflectionClass($class);
         foreach ($ref->getProperties() as $property) {
             if ($property->isPublic()) {
                 self::$class2publicProperties[$class][] = $property->name;
@@ -639,18 +605,21 @@ class Base extends \yii\base\Component {
         return self::$class2publicProperties[$class];
     }
 
-    protected function _hidden2string($control) {
+    protected function _hidden2string($control)
+    {
         return $control->hiddenInput()->parts['{input}'];
     }
 
-    protected function _staticControl2string($control, $options) {
+    protected function _staticControl2string($control, $options)
+    {
         Html::addCssClass($control->options, 'no-required');
         $control->enableClientValidation = false;
 
         return $control->staticControl($options);
     }
 
-    public function bindEventsHandler($handler, $event2method) {
+    public function bindEventsHandler($handler, $event2method)
+    {
         foreach ($event2method as $event => $method) {
             if ($handler->hasMethod($method)) {
                 $this->on($event, [$handler, $method]);
@@ -658,12 +627,14 @@ class Base extends \yii\base\Component {
         }
     }
 
-    protected function beforeBuild() {
+    protected function beforeBuild()
+    {
         $event = new Event();
         $this->trigger(self::EVENT_BEFORE_BUILD, $event);
     }
 
-    protected function afterBuild() {
+    protected function afterBuild()
+    {
         $event = new Event();
         $this->trigger(self::EVENT_AFTER_BUILD, $event);
     }

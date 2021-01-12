@@ -20,6 +20,11 @@ class ActionLinkColumn extends DataColumn {
     public $action = 'update';
 
     /**
+     * @var array
+     */
+    public $removeParams = ['sort'];
+
+    /**
      * Add 'back-url' param in url
      * @var boolean
      */
@@ -74,7 +79,7 @@ class ActionLinkColumn extends DataColumn {
     /**
      * Creates a URL for the given action and model.
      * This method is called for each button and each row.
-     * 
+     *
      * @param string $action the button name (or action ID)
      * @param \yii\db\ActiveRecordInterface $model the data model
      * @param mixed $key the key associated with the data model
@@ -87,6 +92,12 @@ class ActionLinkColumn extends DataColumn {
         }
 
         $params = Yii::$app->request->get();
+        foreach ($this->removeParams as $removeParam) {
+            if (isset($params[$removeParam])) {
+                unset($params[$removeParam]);
+            }
+        }
+
         if (is_array($key)) {
             $params = ArrayHelper::merge($params, $key);
         } else {

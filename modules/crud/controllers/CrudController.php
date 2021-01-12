@@ -6,12 +6,15 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\base\InvalidConfigException;
 use yii\base\Theme;
+use yii\helpers\Url;
 
+use app\modules\crud\models\ModelWithParentInterface;
 use app\modules\crud\behaviors\BackUrlBehavior;
 
 use app\modules\crud\builder\FormBuilder;
 use app\modules\crud\builder\GridBuilder;
 use app\modules\crud\helpers\ClassI18N;
+use app\modules\crud\helpers\ParentModel;
 use app\modules\crud\assets\CrudAsset;
 
 use app\modules\crud\Module as CrudModule;
@@ -27,6 +30,8 @@ class CrudController extends Controller {
     public $modelSearchClass;
 
     public $addCreateButton = true;
+
+    public $parentModelID;
 
     public $assets = [];
     public $defaultAsset = CrudAsset::class;
@@ -52,14 +57,16 @@ class CrudController extends Controller {
         FormBuilder::EVENT_AFTER_BUILD => 'afterFormBuild',
     ];
 
-    public function behaviors() {
+    public function behaviors()
+    {
         $behaviors = parent::behaviors();
-        $behaviors['backUrl'] = BackUrlBehavior::className();
+        $behaviors['backUrl'] = BackUrlBehavior::class;
 
         return $behaviors;
     }
 
-    public function init() {
+    public function init()
+    {
         parent::init();
 
         if (!$this->modelClass) {
@@ -81,9 +88,14 @@ class CrudController extends Controller {
         }
 
         $this->mapFakeTheme();
+
+        if (is_subclass_of($this->modelClass, ModelWithParentInterface::class)) {
+            $this->parentModelID = $this->getModelID();
+        }
     }
 
-    protected function mapFakeTheme() {
+    protected function mapFakeTheme()
+    {
         $view = $this->getView();
 
         $crudModule = new CrudModule('crud');
@@ -104,7 +116,8 @@ class CrudController extends Controller {
      * Show model objects list
      * @return string
      */
-    public function actionIndex() {
+    public function actionIndex()
+    {
         $builder = $this->getGridBuilder();
 
         // call controller event callback
@@ -118,7 +131,8 @@ class CrudController extends Controller {
         return $this->render('index', compact(['builder']));
     }
 
-    protected function getGridBuilder($withCopy = true) {
+    protected function getGridBuilder($withCopy = true)
+    {
         if ($this->gridBuilder) {
             return $this->gridBuilder;
         }
@@ -136,8 +150,9 @@ class CrudController extends Controller {
      * If creation is successful, the browser will be redirected to the 'back' url page.
      * @return mixed
      */
-    public function actionCreate() {
-        return $this->_actionEdit();
+    public function actionCreate()
+    {
+        return $this->_actionEdit(true);
     }
 
     /**
@@ -147,8 +162,9 @@ class CrudController extends Controller {
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionUpdate($id) {
-        return $this->_actionEdit($id);
+    public function actionUpdate()
+    {
+        return $this->_actionEdit(false);
     }
 
     /**
@@ -158,8 +174,9 @@ class CrudController extends Controller {
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionRead($id) {
-        $model = $this->findModel($id);
+    public function actionRead()
+    {
+        $model = $this->findModel();
         $builder = $this->getFromBuilder();
 
         $this->createReadTitle();
@@ -173,24 +190,26 @@ class CrudController extends Controller {
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function _actionEdit($id = null) {
-        $model = $this->findModel($id);
+    protected function _actionEdit($create)
+    {
+        $model = $create? $this->createModel() : $this->findModel();
 
-        $builder = $this->getFromBuilder();
         $this->createForm($model);
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+        $builder = $this->getFromBuilder();
+        if ($builder->data2model(Yii::$app->request->post(), $model)) {
             return $this->goBack();
         }
 
-        $this->addParentToBreadcrumbs();
+        $this->addParentToBreadcrumbs($model);
 
-        $this->createEditTitle($id, $model);
+        $this->createEditTitle($create, $model);
 
         return $this->render('edit', compact(['model', 'builder']));
     }
 
-    protected function createForm($model) {
+    protected function createForm($model)
+    {
         $builder = $this->getFromBuilder();
 
         // call model event callback first
@@ -205,11 +224,12 @@ class CrudController extends Controller {
         return $builder;
     }
 
-    protected function createEditTitle($id, $model) {
+    protected function createEditTitle($isCreate, $model)
+    {
         $view = $this->getView();
         $builder = $this->getFromBuilder();
 
-        if (null === $id) {
+        if ($isCreate) {
             $view->title = Yii::t($this->messageCategory, 'Create item');
         } elseif ($builder->nameAttr) {
             $name = $builder->nameAttr;
@@ -219,7 +239,8 @@ class CrudController extends Controller {
         }
     }
 
-    protected function createReadTitle() {
+    protected function createReadTitle()
+    {
         $view = $this->getView();
         $builder = $this->getFromBuilder();
 
@@ -231,23 +252,43 @@ class CrudController extends Controller {
         }
     }
 
-    protected function createIndexTitle() {
+    protected function createIndexTitle()
+    {
+        $model = $this->createModel();
+        $parents = ParentModel::loadParents($model);
+
+        if ($parents) {
+            $params = ['parentModelName' => end($parents)['name']];
+        } else {
+            $params = [];
+        }
+
         $view = $this->getView();
-        $view->title = Yii::t($this->messageCategory, 'List items');
+        $view->title = Yii::t($this->messageCategory, 'List items', $params);
     }
 
-    protected function addParentToBreadcrumbs() {
+    protected function addParentToBreadcrumbs($model)
+    {
+        $parents = ParentModel::loadParents($model);
+        if ($parents) {
+            $params = ['parentModelName' => end($parents)['name']];
+        } else {
+            $params = [];
+        }
+
         $this->addToBreadcrumbs($this->getBackUrl(),
-                Yii::t($this->messageCategory, 'List items'));
+                Yii::t($this->messageCategory, 'List items', $params));
     }
 
-    protected function addToBreadcrumbs($url, $label) {
+    protected function addToBreadcrumbs($url, $label)
+    {
         $view = $this->getView();
-
-        $view->params['breadcrumbs'][] = ['url' => $url, 'label' => $label];
+        $view->params['breadcrumbs'][] = ['url' => Url::toRoute($url),
+            'label' => $label];
     }
 
-    protected function getFromBuilder($withCopy = true) {
+    protected function getFromBuilder($withCopy = true)
+    {
         if ($this->formBuilder) {
             return $this->formBuilder;
         }
@@ -267,12 +308,9 @@ class CrudController extends Controller {
      * @param string $id
      * @return mixed
      */
-    public function actionDelete($id = null) {
-        if (null === $id) {
-            $selection = Yii::$app->request->post('selection', []);
-        } else {
-            $selection = [$id];
-        }
+    public function actionDelete()
+    {
+        $selection = Yii::$app->request->post('selection', []);
 
         $modelClass = $this->modelClass;
         foreach ($modelClass::findAll($selection) as $model) {
@@ -297,13 +335,9 @@ class CrudController extends Controller {
      * @return \yii\db\ActiveRecord the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function findModel($id = null, $exception = true) {
-        $modelClass = $this->modelClass;
-        if (null === $id) {
-            return Yii::createObject($modelClass);
-        }
-
-        $model = $modelClass::findOne($id);
+    protected function findModel($exception = true)
+    {
+        $model = $this->modelClass::findOne($this->getModelID());
         if (null !== $model) {
             return $model;
         }
@@ -313,27 +347,54 @@ class CrudController extends Controller {
         }
     }
 
-    protected function beforeFilterApply(\yii\base\Event $event) {
+    /**
+     * Create new model object, and set parent model id
+     *
+     * @return \yii\db\ActiveRecord the created model
+     */
+    protected function createModel()
+    {
+        $model = Yii::createObject($this->modelClass);
+
+        $parentModelAttr = ParentModel::getParentModelAttr($model);
+        if ($parentModelAttr) {
+            $model->{$parentModelAttr} = $this->getModelID();
+        }
+
+        return $model;
+    }
+
+    public function getModelID()
+    {
+        return Yii::$app->request->get('id');
+    }
+
+    protected function beforeFilterApply(\yii\base\Event $event)
+    {
         /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
         $gridBuilder = $event->sender;
     }
 
-    protected function beforeGridBuild(\yii\base\Event $event) {
+    protected function beforeGridBuild(\yii\base\Event $event)
+    {
         /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
         $gridBuilder = $event->sender;
     }
 
-    protected function afterGridBuild(\yii\base\Event $event) {
+    protected function afterGridBuild(\yii\base\Event $event)
+    {
         /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
         $gridBuilder = $event->sender;
     }
 
-    protected function beforeFormBuild(\yii\base\Event $event) {
+    protected function beforeFormBuild(\yii\base\Event $event)
+    {
         /* @var $formBuilder \app\modules\crud\builder\FormBuilder */
         $formBuilder = $event->sender;
     }
 
-    protected function afterFormBuild(\yii\base\Event $event) {
+    protected function afterFormBuild(\yii\base\Event $event)
+    {
         /* @var $formBuilder \app\modules\crud\builder\FormBuilder */
         $formBuilder = $event->sender;
     }
