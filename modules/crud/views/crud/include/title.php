@@ -16,7 +16,7 @@ use yii\bootstrap\Html;
             $template = '<span class="with-quota">$1</span>';
         }
 
-        echo preg_replace('/&quot;(.*)&quot;/', $template, Html::encode($this->title));
+        echo preg_replace('/&quot;(.*?)&quot;/', $template, Html::encode($this->title));
         ?>
     </h1>
 </div>
