@@ -76,6 +76,8 @@ class GridBuilder extends Base {
 
     protected $_extraControlVar = 'grid';
 
+    protected static $_autoJoinI = 1;
+
     public function build($modelClass = null) {
         $this->_isExtraControlCreated = false;
         $this->_transformSortAttrMap = $this->_transformFilterAttrMap = [];
@@ -278,7 +280,9 @@ class GridBuilder extends Base {
 
         $parentModelAttr = ParentModel::getParentModelAttr($modelClass);
         if ($parentModelAttr) {
-            $this->query->andWhere([$parentModelAttr => $this->parentModelID]);
+            $table = $modelClass::tableName();
+            $column = "[[{$table}]].[[{$parentModelAttr}]]";
+            $this->query->andWhere([$column => $this->parentModelID]);
         }
 
         return $this->query;
@@ -365,12 +369,14 @@ class GridBuilder extends Base {
         /* @var $query \yii\db\ActiveQuery */
         $query = $this->getQuery();
 
-        $joinToTable = $targetModelClass::tableName();
+        $originJoinToTable = $targetModelClass::tableName();
+        $joinToTable = '_gb_' . self::$_autoJoinI++;
+
         $table = $query->modelClass::tableName();
         $joinAttr = $validator->targetAttribute[$attr];
         $on = "[[{$joinToTable}]].[[{$joinAttr}]] = [[{$table}]].[[{$attr}]]";
 
-        $query->join('left join', $joinToTable, $on);
+        $query->join('left join', [$joinToTable => $originJoinToTable], $on);
         if (!$query->select) {
             $query->addSelect("[[{$table}]].*");
         }
