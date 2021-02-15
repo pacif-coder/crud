@@ -5,7 +5,7 @@ namespace app\modules\crud\models;
  * @XXX
  *
  */
-interface WithNameAttrInterface
+interface ModelWithNameAttrInterface
 {
     /**
      * const NAME_ATTR = 'name';

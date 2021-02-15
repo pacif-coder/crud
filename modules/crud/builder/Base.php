@@ -11,7 +11,6 @@ use yii\db\ActiveQueryInterface;
 
 use yii\bootstrap\Html;
 
-use app\modules\crud\models\ModelWithParentInterface;
 use app\modules\crud\controls\CopyMessageCategoryInterface;
 use app\modules\crud\widgets\MaskedInput;
 use app\modules\crud\widgets\FileInput;
@@ -123,6 +122,8 @@ class Base extends \yii\base\Component {
     protected $_isExtraControlCreated = false;
     protected $_extraControlVar;
     protected $_extraControlsByPlace;
+
+    protected $_enumActiveQueries = [];
 
     public function controller2this($controller, $prefix = 'fb_')
     {

@@ -1,7 +1,7 @@
 <?php
 namespace app\modules\crud\helpers;
 
-use app\modules\crud\models\WithNameAttrInterface;
+use app\modules\crud\models\ModelWithNameAttrInterface;
 
 use ReflectionClass;
 
@@ -37,7 +37,7 @@ class ModelName
 
     protected static function _getNameAttr($modelClass)
     {
-        if (is_subclass_of($modelClass, WithNameAttrInterface::class)) {
+        if (is_subclass_of($modelClass, ModelWithNameAttrInterface::class)) {
             return $modelClass::NAME_ATTR;
         }
 

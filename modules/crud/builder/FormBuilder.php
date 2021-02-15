@@ -21,6 +21,8 @@ class FormBuilder extends Base
 {
     public $removeFields = [];
 
+    public $addFieldsAfter = [];
+
     public $fieldHint = [];
 
     public $fieldset2fields;
@@ -41,8 +43,6 @@ class FormBuilder extends Base
             ],
         ],
     ];
-
-    protected $_enumActiveQueries = [];
 
     protected $_extraControlVar = 'form';
 
@@ -87,6 +87,19 @@ class FormBuilder extends Base
             $this->fields = array_intersect($model->attributes(), $allows);
             $this->fields = array_diff($this->fields, $this->modelClass::primaryKey());
             $this->fields = array_diff($this->fields, $this->removeFields);
+
+            foreach ($this->addFieldsAfter as $afterField => $fields) {
+                if (!in_array($afterField, $this->fields)) {
+                    continue;
+                }
+
+                $index = array_search($afterField, $this->fields);
+                if (false === $index) {
+                    continue;
+                }
+
+                array_splice($this->fields, $index, 0, $fields);
+            }
         } else {
             $notRule = array_diff($this->fields, $allows);
             if ($notRule) {
@@ -215,6 +228,10 @@ class FormBuilder extends Base
 
         if (in_array($attr, $this->enumFields) || isset($this->enumOptions[$attr])) {
             return 'select';
+        }
+
+        if (in_array($attr, $this->readyOnlyFields)) {
+            return 'static';
         }
 
         return $this->uptakeType($attr);

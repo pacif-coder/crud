@@ -7,7 +7,6 @@ use yii\data\ActiveDataProvider;
 use yii\validators\ExistValidator;
 
 use app\modules\crud\builder\Base;
-use app\modules\crud\models\ModelWithParentInterface;
 use app\modules\crud\grid\column\ActionLinkColumn;
 use app\modules\crud\grid\FilterModel;
 use app\modules\crud\helpers\ModelName;
@@ -17,7 +16,8 @@ use app\modules\crud\helpers\ParentModel;
  * XXX
  *
  */
-class GridBuilder extends Base {
+class GridBuilder extends Base
+{
     public $columns;
     public $columnFormats;
 
@@ -78,7 +78,8 @@ class GridBuilder extends Base {
 
     protected static $_autoJoinI = 1;
 
-    public function build($modelClass = null) {
+    public function build($modelClass = null)
+    {
         $this->_isExtraControlCreated = false;
         $this->_transformSortAttrMap = $this->_transformFilterAttrMap = [];
 
@@ -173,7 +174,8 @@ class GridBuilder extends Base {
         $this->afterBuild();
     }
 
-    protected function filterApply() {
+    protected function filterApply()
+    {
         if (!$this->filterModel) {
             return;
         }
@@ -185,11 +187,13 @@ class GridBuilder extends Base {
         $this->filterModel->filter($query);
     }
 
-    public function getFilter() {
+    public function getFilter()
+    {
         return $this->filterModel;
     }
 
-    protected function createFilter() {
+    protected function createFilter()
+    {
         if (!$this->withFilter) {
             return;
         }
@@ -200,7 +204,8 @@ class GridBuilder extends Base {
         $this->filterModel->load(Yii::$app->request->get());
     }
 
-    public function getProvider() {
+    public function getProvider()
+    {
         if (null !== $this->provider) {
             return $this->provider;
         }
@@ -222,7 +227,8 @@ class GridBuilder extends Base {
         return $this->provider = new ActiveDataProvider($options);
     }
 
-    protected function fixSort() {
+    protected function fixSort()
+    {
         if (!$this->_transformSortAttrMap) {
             return;
         }
@@ -240,7 +246,8 @@ class GridBuilder extends Base {
         }
     }
 
-    public function &getOptions() {
+    public function &getOptions()
+    {
         if ($this->_isChangeGridOption) {
             return $this->gridOptions;
         }
