@@ -2,10 +2,11 @@
 namespace app\modules\crud\builder;
 
 use Yii;
-use yii\db\ActiveRecord;
 use yii\base\InvalidConfigException;
+use yii\db\ActiveRecord;
 use yii\db\ActiveQuery;
 use yii\helpers\ArrayHelper;
+use yii\helpers\Html;
 use yii\bootstrap\ActiveForm;
 
 use app\modules\crud\builder\Base;
@@ -44,6 +45,11 @@ class FormBuilder extends Base
         ],
     ];
 
+    public $subObjects = [];
+    public $getSubObjectMethod = 'getSubObject';
+
+    protected $subFormBuilders = [];
+
     protected $_extraControlVar = 'form';
 
     public function build(ActiveRecord $model)
@@ -75,6 +81,20 @@ class FormBuilder extends Base
         $this->beforeBuild();
         $this->initNameAttr();
 
+        foreach ($this->subObjects as $subObjectName) {
+            $method = 'getSubObject';
+            $subObject = $model->{$method}($subObjectName);
+
+            $formBuilder = new self();
+            $formBuilder->fieldPrefix = Html::getInputName($model, $subObjectName);
+            $formBuilder->build($subObject);
+
+            $this->subFormBuilders[$subObjectName] = $formBuilder;
+
+            unset($subObject);
+            unset($formBuilder);
+        }
+
         $allows = $model->activeAttributes();
         foreach ($this->fieldTypes as $attr => $type) {
             if ('static' == $type || 'staticControl' == $type) {
@@ -84,6 +104,7 @@ class FormBuilder extends Base
         $allows = array_merge($allows, $this->subObjects);
 
         if (null === $this->fields) {
+// XXX add subobject
             $this->fields = array_intersect($model->attributes(), $allows);
             $this->fields = array_diff($this->fields, $this->modelClass::primaryKey());
             $this->fields = array_diff($this->fields, $this->removeFields);
@@ -109,6 +130,10 @@ class FormBuilder extends Base
         }
 
         foreach ($this->fields as $field) {
+            if (in_array($field, $this->subObjects)) {
+                continue;
+            }
+
             $type = $this->getType($field, $model);
             if (!$type) {
                 continue;
@@ -345,5 +370,50 @@ class FormBuilder extends Base
         }
 
         return $config;
+    }
+
+    public function field2string($field, \yii\widgets\ActiveForm $form, $model)
+    {
+        if (isset($this->subFormBuilders[$field])) {
+            $formBuilder = $this->subFormBuilders[$field];
+
+            $method = 'getSubObject';
+            $subObject = $model->{$method}($field);
+            return $formBuilder->formBody2string($form, $subObject);
+        }
+
+        return parent::field2string($field, $form, $model);
+    }
+
+    public function formBody2string($form, $model)
+    {
+        $str = '';
+        if ($this->fieldset2fields && $this->fields) {
+            $notInFieldSets = $this->getNotFieldsetFields();
+            if ($notInFieldSets) {
+                $str .= "<!-- not in fieldset fields -->\r\n";
+                $str .= $this->fields2string($notInFieldSets, $form, $model);
+                $str .= "\r\n";
+            }
+
+            foreach ($this->fieldset2fields as $fieldset => $fields) {
+                $str .= "<!-- fieldset '{$fieldset}' -->\r\n";
+                $str .= Html::beginTag('fieldset', isset($this->fieldsetAttrs[$fieldset]) ? $this->fieldsetAttrs[$fieldset] : []);
+
+                $legend = $this->fieldsBeforeFieldsetLegend2string($fieldset, $form, $model);
+                $legend .= $this->getFieldSetLegend($fieldset);
+                $legend .= $this->fieldsAfterFieldsetLegend2string($fieldset, $form, $model);
+                $str .= Html::tag('legend', $legend);
+
+                $fields = $this->skipFieldsetLegendFields($fieldset, $fields);
+                $str .= $this->fields2string($fields, $form, $model);
+
+                $str .= Html::endTag('fieldset') . "\r\n";
+            }
+        } else {
+            $str .= $this->fields2string($this->fields, $form, $model);
+        }
+
+        return $str;
     }
 }
