@@ -5,7 +5,6 @@ use Yii;
 use yii\helpers\Url;
 
 use app\modules\crud\helpers\ParentModel;
-use app\modules\crud\helpers\ModelName;
 use app\modules\crud\helpers\ClassI18N;
 
 /**
@@ -33,7 +32,10 @@ class Breadcrumbs
         }
 
         $messageCategory = ClassI18N::class2messagesPath(get_class($model));
-        $params = ['parentModelName' => end($parents)['name']];
+        $params = [
+            'parentModelName' => end($parents)['parentName'],
+            'nameAttribute' => end($parents)['name'],
+        ];
         $linkText = Yii::t($messageCategory, 'List items', $params);
 
         $urlParams = $this->initUrlParams();
@@ -61,14 +63,16 @@ class Breadcrumbs
             $this->modelData2breadcrumbs($modelData);
         }
 
-
         return $this->breadcrumbs;
     }
 
     protected function modelData2breadcrumbs($modelData)
     {
         $messageCategory = ClassI18N::class2messagesPath($modelData['class']);
-        $params = ['parentModelName' => $modelData['name']];
+        $params = [
+            'parentModelName' => $modelData['parentName'],
+            'nameAttribute' => $modelData['name'],
+        ];
         $linkText = Yii::t($messageCategory, 'List items', $params);
 
         $urlParams = $this->initUrlParams();
