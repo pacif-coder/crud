@@ -1,7 +1,6 @@
 <?php
 use Yii;
 use yii\bootstrap\Html;
-use app\modules\crud\grid\GridView;
 use yii\web\View;
 
 /* @var $this yii\web\View */
@@ -12,7 +11,7 @@ use yii\web\View;
     <?php
         echo $this->render('include/title', compact(['builder']));
 
-        $grid = GridView::begin($builder->getOptions());
-        GridView::end();
+        $grid = $builder->gridClass::begin($builder->getOptions());
+        $builder->gridClass::end();
     ?>
 </div>
