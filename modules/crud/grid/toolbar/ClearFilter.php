@@ -3,6 +3,7 @@ namespace app\modules\crud\grid\toolbar;
 
 use yii\helpers\Html;
 use yii\helpers\Url;
+use yii\grid\GridView;
 
 use app\modules\crud\grid\toolbar\Button;
 
@@ -18,7 +19,10 @@ class ClearFilter extends Button {
     public $order = -1;
 
     public function html() {
-        if (!$this->grid || !$this->grid->filterModel || !$this->grid->filterModel->isLoaded()) {
+        if (!$this->grid || !($this->grid instanceof GridView)
+                || !$this->grid->filterModel
+                || !$this->grid->filterModel->isLoaded()) {
+
             return '';
         }
 

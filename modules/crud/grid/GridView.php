@@ -2,20 +2,17 @@
 namespace app\modules\crud\grid;
 
 use Yii;
-use yii\grid\GridView as BaseGridView;
 use yii\grid\GridViewAsset as BaseGridViewAsset;
 use yii\widgets\BaseListView;
-use yii\helpers\Json;
-use yii\helpers\Html;
-
-use app\modules\crud\grid\GridViewAsset;
-use app\modules\crud\grid\toolbar\GridToolbarButtonAsset;
 
 /**
  *
  *
  */
-class GridView extends BaseGridView {
+class GridView extends \yii\grid\GridView
+{
+    use GridViewTrait;
+
     public $layout = "{toolbar}\r\n{items}\r\n{summary}\r\n{pager}";
 
     public $addCheckboxColumn;
@@ -24,22 +21,8 @@ class GridView extends BaseGridView {
     public $addActionColumn = false;
     public $actionColumn = 'yii\grid\ActionColumn';
 
-    public $toolbar = 'app\modules\crud\grid\Toolbar';
-    public $baseToolbarButtons = [
-        'delete',
-        'clearFilter',
-    ];
-    public $addToolbarButtons = [];
-    public $removeToolbarButtons = [];
-    public $toolbarButtonOptions = [];
-
-    public $isInsideForm;
-    public $surroundForm;
-    public $surroundFormAction = '';
-    public $surroundFormMethod = 'post';
-    public $surroundFormOptions = [];
-
-    protected function initColumns() {
+    protected function initColumns()
+    {
         $isGuessColumn = empty($this->columns);
 
         $addCheckboxColumn = $this->addCheckboxColumn;
@@ -78,62 +61,23 @@ class GridView extends BaseGridView {
     /**
      * Runs the widget.
      */
-    public function run() {
+    public function run()
+    {
+        $this->registerDragable();
+
+        $this->options['data-is-inside-form'] = $this->isInsideForm;
+
         $view = $this->getView();
         BaseGridViewAsset::register($view);
-        GridViewAsset::register($view);
-
-        if ($this->baseToolbarButtons || $this->addToolbarButtons) {
-            GridToolbarButtonAsset::register($view);
-        }
 
         BaseListView::run();
 
-        $id = $this->options['id'];
-        $options = Json::htmlEncode($this->getClientOptions());
-        $view->registerJs("jQuery('#$id').yiiGridView($options);");
+        $this->registerJs();
+        $this->registerAsset();
     }
 
-    public function renderSection($name) {
-        switch ($name) {
-            case '{toolbar}':
-                return $this->renderToolbar();
-
-            default:
-                return parent::renderSection($name);
-        }
-    }
-
-    public function renderTableBody(): string {
-        $body = parent::renderTableBody();
-        if (!$this->surroundForm) {
-            return $body;
-        }
-
-        $str = Html::beginForm($this->surroundFormAction,
-                        $this->surroundFormMethod,
-                        $this->surroundFormOptions);
-
-        $str .= $body;
-        $str .= Html::endForm();
-
-        return $str;
-    }
-
-    public function renderToolbar() {
-        $this->createToolbar();
-
-        return $this->toolbar->render();
-    }
-
-    protected function createToolbar() {
-        if (is_object($this->toolbar)) {
-            return;
-        }
-
-        $desc = is_string($this->toolbar)? ['class' => $this->toolbar] : $this->toolbar;
-        $desc['grid'] = $this;
-
-        $this->toolbar = Yii::createObject($desc);
+    public function renderTableBody(): string
+    {
+        return $this->surroundForm(parent::renderTableBody());
     }
 }

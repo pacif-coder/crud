@@ -8,6 +8,8 @@ use yii\grid\CheckboxColumn;
 use app\modules\crud\grid\toolbar\Button;
 use app\modules\crud\grid\toolbar\NeedCheckboxColumnInterface;
 
+use yii\grid\GridView;
+
 /**
  * Description of Delete
  *
@@ -29,10 +31,12 @@ class SendFormButton extends Button implements NeedCheckboxColumnInterface
 
         $attrs['data-is-inside-form'] = $this->grid->surroundForm || $this->grid->isInsideForm;
 
-        foreach ($this->grid->columns as $column) {
-            if ($column instanceof CheckboxColumn) {
-                $attrs['data-checkbox-name'] = $column->name;
-                break;
+        if ($this->grid instanceof GridView) {
+            foreach ($this->grid->columns as $column) {
+                if ($column instanceof CheckboxColumn) {
+                    $attrs['data-checkbox-name'] = $column->name;
+                    break;
+                }
             }
         }
 

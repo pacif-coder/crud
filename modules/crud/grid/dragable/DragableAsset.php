@@ -1,16 +1,16 @@
 <?php
-namespace app\modules\crud\grid\toolbar;
+namespace app\modules\crud\grid\dragable;
 
 use yii\jui\JuiAsset;
 
 /**
  *
  */
-class GridToolbarButtonAsset extends \yii\web\AssetBundle {
+class DragableAsset extends \yii\web\AssetBundle {
     public $sourcePath = __DIR__ . '/asset/';
 
     public $js = [
-        'js/grid-button.js',
+        'dragable.js',
     ];
 
     public $depends = [

@@ -1,7 +1,11 @@
 $(document).ready(function () {
     $('[data-role="grid-button-send"]').click(function (event) {
         var grid = '#' + $(this).data('target');
-        var rows = $(grid).yiiGridView('getSelectedRows');
+        if ('matrix-grid-view' == $(grid).data('role')) {
+            var rows = $(grid).matrixGridView('getSelectedRows');
+        } else {
+            var rows = $(grid).yiiGridView('getSelectedRows');
+        }        
 
         if (!rows.length) {
             return;

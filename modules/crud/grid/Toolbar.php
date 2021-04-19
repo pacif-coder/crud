@@ -9,7 +9,8 @@ use app\modules\crud\grid\toolbar\NeedCheckboxColumnInterface;
  * Create and show grid buttons
  *
  */
-class Toolbar {
+class Toolbar
+{
     public $grid;
 
     public $buttons;
@@ -17,7 +18,8 @@ class Toolbar {
     /**
      * Return html representation of tollbar
      */
-    public function render() {
+    public function render()
+    {
         $this->createButtons();
 
         // get html representation of button, with it order
@@ -48,7 +50,7 @@ class Toolbar {
         }
 
         // put it all together
-        $widthClass = $leftAsStr && $rightAsStr? ' half-width' : '';
+        $widthClass = $leftAsStr && $rightAsStr ? ' half-width' : '';
         if ($leftAsStr) {
             $leftAsStr = Html::tag('div', $leftAsStr, ['class' => 'pull-left' . $widthClass]);
         }
@@ -63,7 +65,8 @@ class Toolbar {
     /**
      * Create buttons in tollbar
      */
-    protected function createButtons() {
+    protected function createButtons()
+    {
         if (null !== $this->buttons) {
             return;
         }
@@ -105,7 +108,8 @@ class Toolbar {
     /**
      * Some button needs a checkbox column?
      */
-    public function isNeedCheckboxColumn() {
+    public function isNeedCheckboxColumn()
+    {
         $this->createButtons();
         foreach ($this->buttons as $button) {
             if ($button instanceof NeedCheckboxColumnInterface) {
@@ -114,7 +118,8 @@ class Toolbar {
         }
     }
 
-    public function collectButtonActions() {
+    public function collectButtonActions()
+    {
         $actions = [];
         $this->createButtons();
         foreach ($this->buttons as $button) {
@@ -129,7 +134,8 @@ class Toolbar {
     /**
      * Inner compare button order function
      */
-    public static function cmpButtonOrder($button1, $button2) {
+    public static function cmpButtonOrder($button1, $button2)
+    {
         if (null === $button1['order']) {
             $button1['order'] = 0;
         }

@@ -1,4 +1,4 @@
-.grid-view {
+.grid-view, .matrix-grid-view {
     .form-inline .help-block:empty {
         display: none
     }
@@ -18,8 +18,23 @@
 	}
 
     .table {
+        margin-bottom: 0;
+        
         thead, tbody, tfoot {
             tr {
+                &.no_active {
+                    opacity: 0.3;
+                }
+                
+                &.ui-sortable-helper {
+                    display: table;
+                    background: #fff;
+                }
+
+                &.ui-state-highlight { 
+                    background: #fffa90;
+                }                            
+                
                 th {
                     vertical-align: top;
                 }
@@ -27,10 +42,6 @@
                 th.no-wrap {
                     white-space: nowrap;
                 }
-            }
-
-            tr.no_active {
-                opacity: 0.3;
             }
 
             & > tr.filters {
@@ -83,7 +94,6 @@
         content: "\e156";
     }
 
-    .table {margin-bottom: 0}
     .summary {text-align: right}
     .not-wrap {white-space: nowrap}
     .action-column {
