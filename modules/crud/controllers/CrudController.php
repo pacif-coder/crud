@@ -11,6 +11,8 @@ use yii\helpers\Url;
 use app\modules\crud\models\ModelWithParentInterface;
 use app\modules\crud\behaviors\BackUrlBehavior;
 
+use app\modules\crud\widgets\Breadcrumbs;
+
 use app\modules\crud\builder\FormBuilder;
 use app\modules\crud\builder\GridBuilder;
 use app\modules\crud\helpers\ClassI18N;
@@ -24,7 +26,12 @@ use app\modules\crud\Module as CrudModule;
  *
  * @property View|\yii\web\View $view The view object that can be used to render views or view files.
  */
-class CrudController extends Controller {
+class CrudController extends Controller
+{
+    use ControllerTrait {
+        ControllerTrait::init as traitInit;
+    }
+
     public $modelClass;
     public $messageCategory;
     public $modelSearchClass;
@@ -32,9 +39,6 @@ class CrudController extends Controller {
     public $addCreateButton = true;
 
     public $parentModelID;
-
-    public $assets = [];
-    public $defaultAsset = CrudAsset::class;
 
     /**
      * @var \app\modules\crud\builder\GridBuilder
@@ -77,39 +81,11 @@ class CrudController extends Controller {
             $this->messageCategory = ClassI18N::class2messagesPath($this->modelClass);
         }
 
-        $view = $this->getView();
-
-        if ($this->defaultAsset) {
-            $view->registerAssetBundle($this->defaultAsset);
-        }
-
-        foreach ($this->assets as $asset) {
-            $view->registerAssetBundle($asset);
-        }
-
-        $this->mapFakeTheme();
-
         if (is_subclass_of($this->modelClass, ModelWithParentInterface::class)) {
             $this->parentModelID = $this->getModelID();
         }
-    }
 
-    protected function mapFakeTheme()
-    {
-        $view = $this->getView();
-
-        $crudModule = new CrudModule('crud');
-        $crudViewPath = $crudModule->getViewPath() . DIRECTORY_SEPARATOR . $crudModule->defaultRoute;
-
-        $thisViewPath = $this->getViewPath();
-
-        $fakeTheme = new Theme();
-        $fakeTheme->pathMap[$thisViewPath] = [
-            $thisViewPath,
-            $crudViewPath,
-        ];
-
-        $view->theme = $fakeTheme;
+        $this->traitInit();
     }
 
     /**
@@ -118,15 +94,14 @@ class CrudController extends Controller {
      */
     public function actionIndex()
     {
-        $builder = $this->getGridBuilder();
-
-        // call controller event callback
-        $builder->bindEventsHandler($this, $this->gridBuilderEvent);
-
-        // build grid description
-        $builder->build();
+        // build grid
+        $builder = $this->createGrid();
 
         $this->createIndexTitle();
+
+        $view = $this->getView();
+        $br = new Breadcrumbs();
+        $view->params['breadcrumbs'] = $br->createIndexBreadcrumbs($this->createModel());
 
         return $this->render('index', compact(['builder']));
     }
@@ -168,13 +143,45 @@ class CrudController extends Controller {
     }
 
     /**
+     * Sort 
+     * @return mixed
+     */
+    public function actionSort()
+    {
+        $sort = Yii::$app->request->post('sort', []);
+
+        $builder = $this->createGrid();
+
+        $provider = $builder->getProvider();
+        $begin = 0;
+        if (($pagination = $provider->getPagination()) !== false) {
+            $pagination->totalCount = $provider->getTotalCount();
+            $begin = $pagination->getOffset();
+        }
+
+        $sort_attr = $this->modelClass::ORDER_ATTR;
+        foreach ($sort as $index => $keys) {
+            $model = $this->modelClass::findOne($keys);
+            $pos = $index + $begin + 1;
+            if ($pos == $model->{$sort_attr}) {
+                continue;
+            }
+
+            $model->{$sort_attr} = $pos;
+            $model->save();
+        }
+
+        return $this->goBack();
+    }
+
+    /**
      * Show an existing model object.
      * If update is successful, the browser will be redirected to the 'back' url page.
      * @param string $id
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionRead()
+    protected function actionRead()
     {
         $model = $this->findModel();
         $builder = $this->getFromBuilder();
@@ -194,14 +201,16 @@ class CrudController extends Controller {
     {
         $model = $create? $this->createModel() : $this->findModel();
 
-        $this->createForm($model);
-
-        $builder = $this->getFromBuilder();
+        $builder = $this->createForm($model);
         if ($builder->data2model(Yii::$app->request->post(), $model)) {
             return $this->goBack();
         }
 
-        $this->addParentToBreadcrumbs($model);
+        // $this->addParentToBreadcrumbs($model);
+
+        $view = $this->getView();
+        $br = new Breadcrumbs();
+        $view->params['breadcrumbs'] = $br->createEditBreadcrumbs($model, $this->getBackUrl());
 
         $this->createEditTitle($create, $model);
 
@@ -220,6 +229,22 @@ class CrudController extends Controller {
 
         // build form description
         $builder->build($model);
+
+        return $builder;
+    }
+
+    protected function createGrid()
+    {
+        $builder = $this->getGridBuilder();
+
+        // call model class event callback first
+        $builder->bindEventsHandler($this->modelClass, $this->gridBuilderEvent);
+
+        // call controller event callback
+        $builder->bindEventsHandler($this, $this->gridBuilderEvent);
+
+        // build grid description
+        $builder->build();
 
         return $builder;
     }
@@ -257,10 +282,12 @@ class CrudController extends Controller {
         $model = $this->createModel();
         $parents = ParentModel::loadParents($model);
 
+        $params = [];
         if ($parents) {
-            $params = ['parentModelName' => end($parents)['name']];
-        } else {
-            $params = [];
+            $params = [
+                'parentModelName' => end($parents)['parentName'],
+                'nameAttribute' => end($parents)['name'],
+            ];
         }
 
         $view = $this->getView();
@@ -270,21 +297,17 @@ class CrudController extends Controller {
     protected function addParentToBreadcrumbs($model)
     {
         $parents = ParentModel::loadParents($model);
+
+        $params = [];
         if ($parents) {
-            $params = ['parentModelName' => end($parents)['name']];
-        } else {
-            $params = [];
+            $params = [
+                'parentModelName' => end($parents)['parentName'],
+                'nameAttribute' => end($parents)['name'],
+            ];
         }
 
         $this->addToBreadcrumbs($this->getBackUrl(),
                 Yii::t($this->messageCategory, 'List items', $params));
-    }
-
-    protected function addToBreadcrumbs($url, $label)
-    {
-        $view = $this->getView();
-        $view->params['breadcrumbs'][] = ['url' => Url::toRoute($url),
-            'label' => $label];
     }
 
     protected function getFromBuilder($withCopy = true)
