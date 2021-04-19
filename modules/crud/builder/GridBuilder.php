@@ -7,10 +7,16 @@ use yii\data\ActiveDataProvider;
 use yii\validators\ExistValidator;
 
 use app\modules\crud\builder\Base;
-use app\modules\crud\grid\column\ActionLinkColumn;
+use app\modules\crud\grid\GridView;
+use app\modules\crud\grid\MatrixGridView;
 use app\modules\crud\grid\FilterModel;
+use app\modules\crud\models\ModelWithParentInterface;
+
+use app\modules\crud\grid\column\ActionLinkColumn;
 use app\modules\crud\helpers\ModelName;
 use app\modules\crud\helpers\ParentModel;
+use app\modules\crud\models\ModelWithOrderInterface;
+
 
 /**
  * XXX
@@ -18,15 +24,19 @@ use app\modules\crud\helpers\ParentModel;
  */
 class GridBuilder extends Base
 {
-    public $columns;
-    public $columnFormats;
+    public $gridType;
+    public $gridClass;
 
+    public $columns;
+    public $removeColumns = [];
     public $addColumnsAfter = [];
+    public $columnFormats;
 
     public $defaultOrder;
     public $pageSize;
     public $gridWithEditLink = true;
     public $gridOptions = [];
+    public $dragable;
 
     public $addToolbarButtons = [];
     public $removeToolbarButtons = [];
@@ -55,6 +65,19 @@ class GridBuilder extends Base
     public $transformAttrMap = [];
 
     public $autoJoin = true;
+
+    /**
+     * @event Grid types
+     */
+
+    const TYPE_DEFAULT = 'default';
+
+    const TYPE_MATRIX = 'matrix';
+
+    public $gridType2Class = [
+        self::TYPE_DEFAULT => GridView::class,
+        self::TYPE_MATRIX => MatrixGridView::class,
+    ];
 
     /**
      * @event Event
@@ -87,8 +110,17 @@ class GridBuilder extends Base
             $this->setModelClass($modelClass);
         }
 
+        if (null === $this->dragable && is_a($this->modelClass, ModelWithOrderInterface::class, true)) {
+            $this->dragable = true;
+        }
+
         $this->beforeBuild();
         $this->initNameAttr();
+
+        if (!$this->gridType) {
+            $this->gridType = self::TYPE_DEFAULT;
+        }
+        $this->gridClass = $this->gridType2Class[$this->gridType];
 
         if (null === $this->columns) {
             $this->columns = [];
@@ -160,6 +192,13 @@ class GridBuilder extends Base
             }
         }
 
+        // off sort in table column
+        if ($this->dragable) {
+            foreach (array_keys($this->columns) as $column) {
+                $this->columns[$column]['enableSorting'] = false;
+            }
+        }
+
         if ($this->gridWithEditLink && $this->nameAttr) {
             $this->makeGridEditLink();
         }
@@ -204,6 +243,9 @@ class GridBuilder extends Base
         $this->filterModel->load(Yii::$app->request->get());
     }
 
+    /**
+     * @return ActiveDataProvider
+     */
     public function getProvider()
     {
         if (null !== $this->provider) {
@@ -214,10 +256,19 @@ class GridBuilder extends Base
             'query' => $this->getQuery(),
         ];
 
-        if (null !== $this->defaultOrder) {
-            $options['sort']['defaultOrder'] = $this->defaultOrder;
-        } elseif ($this->nameAttr) {
-            $options['sort']['defaultOrder'] = [$this->nameAttr => SORT_ASC];
+        if ($this->dragable) {
+            $options['sort'] = false;
+        } else {
+            $defaultOrder = null;
+            if (null !== $this->defaultOrder) {
+                $defaultOrder = $this->defaultOrder;
+            } elseif ($this->nameAttr) {
+                $defaultOrder = [$this->nameAttr => SORT_ASC];
+            }
+
+            if (null !== $defaultOrder) {
+                $options['sort']['defaultOrder'] = $defaultOrder;
+            }
         }
 
         if (null !== $this->pageSize) {
@@ -253,7 +304,11 @@ class GridBuilder extends Base
         }
 
         $this->_isChangeGridOption = true;
-        $this->gridOptions['columns'] = $this->columns;
+
+        if (self::TYPE_MATRIX != $this->gridType) {
+            $this->gridOptions['columns'] = $this->columns;
+        }
+
         $this->gridOptions['addToolbarButtons'] = $this->addToolbarButtons;
         $this->gridOptions['removeToolbarButtons'] = $this->removeToolbarButtons;
         $this->gridOptions['toolbarButtonOptions'] = $this->toolbarButtonOptions;
@@ -264,6 +319,8 @@ class GridBuilder extends Base
         $this->gridOptions['surroundFormAction'] = $this->surroundFormAction;
         $this->gridOptions['surroundFormMethod'] = $this->surroundFormMethod;
         $this->gridOptions['surroundFormOptions'] = $this->surroundFormOptions;
+
+        $this->gridOptions['dragable'] = $this->dragable;
 
         if ($this->filterModel && $this->filterInGrid) {
             $this->gridOptions['filterModel'] = $this->filterModel;
@@ -290,6 +347,10 @@ class GridBuilder extends Base
             $table = $modelClass::tableName();
             $column = "[[{$table}]].[[{$parentModelAttr}]]";
             $this->query->andWhere([$column => $this->parentModelID]);
+        }
+
+        if ($this->dragable) {
+            $this->query->orderBy([$this->modelClass::ORDER_ATTR => SORT_ASC]);
         }
 
         return $this->query;

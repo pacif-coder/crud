@@ -15,6 +15,7 @@ use app\modules\crud\controls\CopyMessageCategoryInterface;
 use app\modules\crud\widgets\MaskedInput;
 use app\modules\crud\widgets\FileInput;
 use app\modules\crud\helpers\ModelName;
+use app\modules\crud\helpers\ClassI18N;
 
 use ReflectionClass;
 
@@ -62,8 +63,6 @@ class Base extends \yii\base\Component {
     public $removeExtraControls = [];
     public $extraControlOptions = [];
 
-    public $removeColumns = [];
-
     public $enumFields;
     public $enumOptions;
     public $translationEnumOptions = [];
@@ -72,8 +71,7 @@ class Base extends \yii\base\Component {
 
     public $messageCategory;
 
-    public $subObjects = [];
-    public $getSubObjectMethod = 'getSubObject';
+    public $fieldPrefix;
 
     public $nameAttr = null;
 
@@ -138,6 +136,10 @@ class Base extends \yii\base\Component {
     {
         $this->modelClass = $modelClass;
         $this->static2this($modelClass, $prefix);
+
+        if (!$this->messageCategory) {
+            $this->messageCategory = ClassI18N::class2messagesPath($modelClass);
+        }
     }
 
     public function static2this($class, $prefix = 'fb_')
@@ -487,7 +489,7 @@ class Base extends \yii\base\Component {
      * Create string represention of form field
      * @return string
      */
-    public function field2string($field, $form, $model)
+    public function field2string($field, \yii\widgets\ActiveForm $form, $model)
     {
         $type = isset($this->fieldTypes[$field]) ? $this->fieldTypes[$field] : null;
         switch ($type) {
@@ -539,11 +541,19 @@ class Base extends \yii\base\Component {
 
         $widget = isset($this->fieldType2widget[$type]) ? $this->fieldType2widget[$type] : null;
         if ($widget) {
+            if ($this->fieldPrefix) {
+                $options['options']['name'] = "{$this->fieldPrefix}[{$field}]";
+            }
+
             if ($isEnum) {
                 $options['items'] = $items;
             }
 
             return (string) $control->widget($widget, $options);
+        }
+
+        if ($this->fieldPrefix) {
+            $options['name'] = "{$this->fieldPrefix}[{$field}]";
         }
 
         $innerMethod = "_{$type}2string";
@@ -553,7 +563,7 @@ class Base extends \yii\base\Component {
 
         $method = isset($this->fieldType2fieldMethod[$type]) ? $this->fieldType2fieldMethod[$type] : null;
         if ($isEnum && $method) {
-            return $control->{$method}($items);
+            return $control->{$method}($items, $options);
         }
 
         if ($method) {
@@ -621,9 +631,17 @@ class Base extends \yii\base\Component {
 
     public function bindEventsHandler($handler, $event2method)
     {
-        foreach ($event2method as $event => $method) {
-            if ($handler->hasMethod($method)) {
-                $this->on($event, [$handler, $method]);
+        if (is_object($handler)) {
+            foreach ($event2method as $event => $method) {
+                if ($handler->hasMethod($method)) {
+                    $this->on($event, [$handler, $method]);
+                }
+            }
+        } elseif (is_string($handler)) {
+            foreach ($event2method as $event => $method) {
+                if (method_exists($handler, $method)) {
+                    $this->on($event, [$handler, $method]);
+                }
             }
         }
     }
