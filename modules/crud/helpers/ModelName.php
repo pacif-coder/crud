@@ -14,10 +14,23 @@ class ModelName
 
     protected static $class2nameAttr = [];
 
-    public static function getName($model) {
+    public static function getName($model)
+    {
         $nameAttr = self::getNameAttr($model);
-        if ($nameAttr) {
+        if ($nameAttr && is_object($model)) {
             return $model->{$nameAttr};
+        }
+    }
+
+    public static function getNameByClass($class, $objectData)
+    {
+        $nameAttr = self::getNameAttr($class);
+        if (!$nameAttr) {
+            return;
+        }
+
+        if (is_array($objectData)) {
+            return $objectData[$nameAttr];
         }
     }
 

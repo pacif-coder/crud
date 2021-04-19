@@ -15,11 +15,6 @@ class ParentModel
     protected static $class2parentClassToAttr = [];
     protected static $class2parentModelAttr = [];
 
-    public function getParentModelName($modelClass, $id)
-    {
-
-    }
-
     public static function getParentModelClass($model)
     {
         if (is_object($model)) {
@@ -60,6 +55,7 @@ class ParentModel
     public static function loadParents($model)
     {
         $list = [];
+        $i = 0;
         while (true) {
             $parentClass = self::getParentModelClass($model);
             if (!$parentClass) {
@@ -83,11 +79,18 @@ class ParentModel
                 break;
             }
 
-            $list[] = [
+            $list[$i] = [
                 'class' => $parentClass,
                 'name' => ModelName::getName($model),
+                'parentName' => null,
                 'id' => $model->{$parentIDAttr},
             ];
+
+            if ($i > 0) {
+                $list[$i - 1]['parentName'] = ModelName::getName($model);
+            }
+
+            $i++;
         }
 
         return array_reverse($list);
