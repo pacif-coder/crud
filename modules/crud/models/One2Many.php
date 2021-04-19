@@ -45,6 +45,15 @@ class One2Many extends \yii\db\ActiveRecord
         }
     }
 
+    public static function getExist(ActiveQuery $queryLink)
+    {
+        static::initByQueryLink($queryLink);
+        $id = static::getModelId($queryLink);
+
+        return ArrayHelper::getColumn(self::findAll([self::$fromAttr => $id]),
+                                      self::$toAttr);
+    }
+
     public static function getFromAttr()
     {
         return self::$fromAttr;
