@@ -5,6 +5,8 @@ use Yii;
 use yii\grid\GridViewAsset as BaseGridViewAsset;
 use yii\widgets\BaseListView;
 
+use app\modules\crud\grid\column\DataColumn;
+
 /**
  *
  *
@@ -12,6 +14,8 @@ use yii\widgets\BaseListView;
 class GridView extends \yii\grid\GridView
 {
     use GridViewTrait;
+
+    public $dataColumnClass = DataColumn::class;
 
     public $layout = "{toolbar}\r\n{items}\r\n{summary}\r\n{pager}";
 

@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\behaviors\one2many;
+namespace app\modules\crud\behaviors\viaTable;
 
 /**
  *

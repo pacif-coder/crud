@@ -1,14 +1,11 @@
 <?php
 namespace app\modules\crud\grid\toolbar;
 
-use Yii;
-use yii\helpers\Url;
 use yii\grid\CheckboxColumn;
+use yii\grid\GridView;
 
 use app\modules\crud\grid\toolbar\Button;
 use app\modules\crud\grid\toolbar\NeedCheckboxColumnInterface;
-
-use yii\grid\GridView;
 
 /**
  * Description of Delete
@@ -16,37 +13,35 @@ use yii\grid\GridView;
  */
 class SendFormButton extends Button implements NeedCheckboxColumnInterface
 {
-    public $action;
     public $options = ['data-role' => 'grid-button-send'];
+
+    protected static $isAddAction = true;
 
     public function getAttrs()
     {
         $attrs = parent::getAttrs();
-        if ($this->action) {
-            $params = Yii::$app->request->get();
-            $params[0] = $this->action;
-
-            $attrs['data-url'] = Url::toRoute($params);
-        }
 
         $attrs['data-is-inside-form'] = $this->grid->surroundForm || $this->grid->isInsideForm;
 
-        if ($this->grid instanceof GridView) {
-            foreach ($this->grid->columns as $column) {
-                if ($column instanceof CheckboxColumn) {
-                    $attrs['data-checkbox-name'] = $column->name;
-                    break;
-                }
+        if (!is_a($this->grid, GridView::class)) {
+            return $attrs;
+        }
+
+        foreach ($this->grid->columns as $column) {
+            if (!($column instanceof CheckboxColumn)) {
+                continue;
             }
+
+            $attrs['data-checkbox-name'] = $column->name;
+            $attrs['data-checkbox-role'] = $column->checkboxOptions['data-role'];
+            break;
         }
 
         return $attrs;
     }
 
-    public function html()
+    public function isShow()
     {
-        if ($this->grid->dataProvider->getTotalCount()) {
-            return parent::html();
-        }
+        return $this->grid->dataProvider->getTotalCount() > 0;
     }
 }

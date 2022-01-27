@@ -5,6 +5,8 @@ use Yii;
 use yii\helpers\Html;
 use app\modules\crud\grid\toolbar\NeedCheckboxColumnInterface;
 
+use app\modules\crud\controls\Base;
+
 /**
  * Create and show grid buttons
  *
@@ -25,6 +27,11 @@ class Toolbar
         // get html representation of button, with it order
         $left = $right = [];
         foreach ($this->buttons as $button) {
+            /*@var $button Base */
+            if (!$button->isShow()) {
+                continue;
+            }
+            
             $html = $button->html();
             if ('right' == $button->align) {
                 $right[] = ['html' => $html, 'order' => $button->order];

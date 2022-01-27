@@ -3,6 +3,7 @@ namespace app\modules\crud\controls;
 
 use Yii;
 use yii\bootstrap\Html;
+use yii\helpers\Url;
 
 use app\modules\crud\helpers\ClassI18N;
 
@@ -18,6 +19,10 @@ class Base extends \yii\base\BaseObject
 
     public $label = '';
 
+    public $place;
+
+    public $name;
+
     public $icon = '';
 
     public $baseClass = 'btn';
@@ -30,7 +35,13 @@ class Base extends \yii\base\BaseObject
 
     public $order;
 
+    public $action;
+
+    public $controller;
+
     public $options = [];
+
+    protected static $isAddAction;
 
     public function init()
     {
@@ -61,6 +72,7 @@ class Base extends \yii\base\BaseObject
     public function html()
     {
         $atrrs = $this->getAttrs();
+
         foreach ($atrrs as $atrr => $value) {
             if (is_bool($value)) {
                 $value = ($value) ? 1 : 0;
@@ -78,7 +90,47 @@ class Base extends \yii\base\BaseObject
         Html::addCssClass($attrs, $this->colorClass);
         Html::addCssClass($attrs, $this->sizeClass);
 
+        if ($this->name) {
+            $attrs['id'] = $this->name;
+        } elseif ($this->action) {
+            $attrs['id'] = $this->action;
+        }
+
+        $this->addActionAttr($attrs);
+
         return $attrs;
+    }
+
+    protected function addActionAttr(&$attrs)
+    {
+        if (!static::$isAddAction || !$this->action) {
+            return;
+        }
+
+        $attrs['data-url'] = $this->getUrl();
+        $attrs['data-action'] = $this->action;
+    }
+
+    public function getUrl()
+    {
+        if (!$this->action) {
+            return;
+        }
+
+        $get = Yii::$app->request->get();
+
+        if ($this->controller) {
+            $get[0] = $this->controller . '/' . $this->action;
+        } else {
+            $get[0] = $this->action;
+        }
+
+        return Url::to($get);
+    }
+
+    public function isShow()
+    {
+        return true;
     }
 
     public function __toString()

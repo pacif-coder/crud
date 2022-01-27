@@ -3,8 +3,6 @@ namespace app\modules\crud\grid\toolbar;
 
 use Yii;
 
-use app\modules\crud\grid\toolbar\SendFormButton;
-
 /**
  * Delete button
  *

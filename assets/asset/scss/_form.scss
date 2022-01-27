@@ -35,10 +35,8 @@ form {
         margin-right: 10px;
     }
 
-    .hint-block {
-        display: block;
-        margin-top: 5px;
-        color: #999;
+    .help-block {
+        margin: 0;
     }
 
     .error-summary {
@@ -49,16 +47,11 @@ form {
         margin: 0 0 15px 0;
     }
 
-    .not-set {
-        color: #c55;
-        font-style: italic;
-    }
-
     fieldset legend {
         .btn {margin-left: 5px;}
         input[type="radio"], input[type="checkbox"] {margin-right: 5px;}
     }
-    
+
     .form-group {
         &.short textarea {
             min-height: 100px;
@@ -66,12 +59,12 @@ form {
 
         &.medium textarea {
             min-height: 250px;
-        }        
-        
+        }
+
         &.high textarea {
             min-height: 500px;
-        }                
-    } 
+        }
+    }
 }
 
 .scroll, .scroll-shot, .scroll-medium {

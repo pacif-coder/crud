@@ -1,33 +1,37 @@
 <?php
 namespace app\modules\crud\grid\toolbar;
 
-use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\GridView;
-
-use app\modules\crud\grid\toolbar\Button;
 
 /**
  * @XXX
  *
  */
-class ClearFilter extends Button {
+class ClearFilter extends Link
+{
     public $icon = 'remove';
 
     public $label = 'Clear filter';
 
     public $order = -1;
 
-    public function html() {
-        if (!$this->grid || !($this->grid instanceof GridView)
-                || !$this->grid->filterModel
-                || !$this->grid->filterModel->isLoaded()) {
+    public function getUrl()
+    {
+        // drop all form filter params
+        return Url::current([$this->grid->filterModel->formName() => null]);
+    }
 
-            return '';
+    public function isShow()
+    {
+        if (!$this->grid || !($this->grid instanceof GridView)) {
+            return false;
         }
 
-        // drop all form filter params
-        $url = Url::current([$this->grid->filterModel->formName() => null]);
-        return Html::a($this->getContent(), $url, $this->getAttrs());
+        if (!$this->grid->filterModel || !$this->grid->filterModel->isLoaded()) {
+            return false;
+        }
+
+        return parent::isShow();
     }
 }

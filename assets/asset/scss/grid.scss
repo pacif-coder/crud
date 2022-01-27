@@ -9,32 +9,32 @@
         .half-width {
             width: 50%;
         }
-    }
 
-	.toolbar > div > {
+	& > div > {
 		.btn + .btn, .btn + span, span + .btn, span + span {
 			margin-left: 5px;
 		}
 	}
+    }
 
     .table {
         margin-bottom: 0;
-        
+
         thead, tbody, tfoot {
             tr {
                 &.no_active {
                     opacity: 0.3;
                 }
-                
+
                 &.ui-sortable-helper {
                     display: table;
                     background: #fff;
                 }
 
-                &.ui-state-highlight { 
+                &.ui-state-highlight {
                     background: #fffa90;
-                }                            
-                
+                }
+
                 th {
                     vertical-align: top;
                 }
@@ -105,13 +105,30 @@
         &-three {width: 60px;}
     }
 
+    @for $i from 1 through 5 {
+        .column-width-#{$i * 10} {width: #{$i * 10}px;}
+    }
+
     .checkbox-column {
         width: 20px;
     }
 
     .not-set {
-        color: #c55c55;
-        font-style: italic;
+        color: #ccc;
+    }
+
+    .truncate-text {
+        max-width: 200px;
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .actions {
+        .btn:not(:last-child) {
+            margin-bottom: 5px;
+        }
     }
 }
 

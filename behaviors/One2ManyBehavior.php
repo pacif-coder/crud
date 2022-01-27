@@ -3,16 +3,16 @@ namespace app\modules\crud\behaviors;
 
 use yii\db\ActiveRecord;
 
-use app\modules\crud\behaviors\one2many\LinkModel;
-
 use Exception;
 
 /**
- *
+ * XXX add ckech on key exist
  */
 class One2ManyBehavior extends \yii\base\Behavior
 {
     public $attr;
+
+    protected $fromModelClass = [];
 
     protected $fromAttr = [];
 
@@ -20,13 +20,20 @@ class One2ManyBehavior extends \yii\base\Behavior
 
     protected $idAttr = [];
 
-    protected $viaTable = [];
-
     protected $new = [];
 
     protected $exist = [];
 
     protected $querys = [];
+
+    public function events()
+    {
+        return [
+            ActiveRecord::EVENT_INIT => 'afterInit',
+            ActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
+            ActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
+        ];
+    }
 
     public function afterInit()
     {
@@ -38,37 +45,23 @@ class One2ManyBehavior extends \yii\base\Behavior
             if (count($linkDesc) > 1) {
                 throw new Exception('Unsupport db link description');
             }
+
+            $this->fromAttr[$attr] = key($linkDesc);
+
+            $fromClass = $queryLink->modelClass;
+            $this->fromModelClass[$attr] = $fromClass;
+
             $this->toAttr[$attr] = current($linkDesc);
 
-            $viaLinkDesc = $queryLink->via->link;
-            if (count($viaLinkDesc) > 1) {
-                throw new Exception('Unsupport via link description');
+            $keys = $fromClass::primaryKey();
+            if (count($keys) > 1) {
+                throw new Exception("Unsupport key count in '{$fromClass}' class");
             }
-            $this->fromAttr[$attr] = key($viaLinkDesc);
-            $this->idAttr[$attr] = current($viaLinkDesc);
 
-            $this->viaTable[$attr] = current($queryLink->via->from);
-
-            $queryLink->via = null;
-            $queryLink->primaryModel = null;
+            $this->idAttr[$attr] = current($keys);
 
             $this->querys[$attr] = $queryLink;
         }
-    }
-
-    public function checkAttr($attr)
-    {
-        $query = $this->querys[$attr];
-
-        $id = $this->getModelId($attr);
-        $possibleIds = $query->asArray()->select($this->idAttr[$attr])->column();
-        $notPossible = array_diff($this->new[$attr], $possibleIds);
-        if (!$notPossible) {
-            return;
-        }
-
-        $notExist = implode("', '", $notPossible);
-        $this->owner->addError($attr, "No exist object with id '{$notExist}'");
     }
 
     public function afterSave()
@@ -79,42 +72,47 @@ class One2ManyBehavior extends \yii\base\Behavior
             }
 
             $exist = $this->getExist($attr);
-            $delete = array_diff($exist, $this->new[$attr]);
-            $add = array_diff($this->new[$attr], $exist);
+            $new = $this->getNew($attr);
+
+            $delete = array_diff($exist, $new);
+            $add = array_diff($new, $exist);
 
             if (!$delete && !$add) {
                 continue;
             }
 
+            $class = $this->fromModelClass[$attr];
             $id = $this->getModelId($attr);
-            LinkModel::setTableName($this->viaTable[$attr]);
 
             if ($delete) {
-                $where = [
-                    $this->fromAttr[$attr] => $id,
-                    $this->toAttr[$attr] => $delete,
-                ];
-                LinkModel::deleteAll($where);
+                $query = $class::find()->where([$this->idAttr[$attr] => $delete]);
+                foreach ($query->all() as $model) {
+                    $model->{$this->fromAttr[$attr]} = null;
+                    $model->save();
+                }
             }
 
-            if ($add) {
-                foreach ($add as $addId) {
-                    $link = new LinkModel();
-                    $link->{$this->fromAttr[$attr]} = $id;
-                    $link->{$this->toAttr[$attr]} = $addId;
-                    $link->save();
-                }
+            foreach ($class::findAll([$this->idAttr[$attr] => $add]) as $model) {
+                $model->{$this->fromAttr[$attr]} = $id;
+                $model->save();
             }
         }
     }
 
-    public function events()
+    public function checkAttr($attr)
     {
-        return [
-            ActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
-            ActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
-            ActiveRecord::EVENT_INIT => 'afterInit',
-        ];
+        $query = $this->querys[$attr];
+
+        $id = $this->getModelId($attr);
+        $possibleIds = $query->asArray()->select($this->idAttr[$attr])->column();
+        $notPossible = array_diff($this->getNew($attr), $possibleIds);
+        if (!$notPossible) {
+            return true;
+        }
+
+        $notExist = implode("', '", $notPossible);
+        $this->owner->addError($attr, "No exist object with id '{$notExist}'");
+        return false;
     }
 
     public function __set($name, $new)
@@ -139,14 +137,19 @@ class One2ManyBehavior extends \yii\base\Behavior
         }
 
         $id = $this->getModelId($attr);
-        LinkModel::setTableName($this->viaTable[$attr]);
+        $query = $this->fromModelClass[$attr]::find()->select($this->idAttr[$attr])
+                 ->where([$this->fromAttr[$attr] => $id]);
 
-        return $this->exist[$attr] = LinkModel::find()->select($this->toAttr[$attr])
-                    ->where([$this->fromAttr[$attr] => $id])->column();
+        return $this->exist[$attr] = $query->column();
+    }
+
+    public function getNew($attr)
+    {
+        return $this->new[$attr];
     }
 
     protected function getModelId($attr)
     {
-        return $this->owner->{$this->idAttr[$attr]};
+        return $this->owner->{$this->toAttr[$attr]};
     }
 }

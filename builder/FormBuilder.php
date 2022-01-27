@@ -3,14 +3,15 @@ namespace app\modules\crud\builder;
 
 use Yii;
 use yii\base\InvalidConfigException;
+use yii\base\Model;
 use yii\db\ActiveRecord;
 use yii\db\ActiveQuery;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
-use yii\bootstrap\ActiveForm;
 
 use app\modules\crud\builder\Base;
 use app\modules\crud\helpers\ModelName;
+use app\modules\crud\widgets\ActiveForm;
 
 use Exception;
 
@@ -51,9 +52,12 @@ class FormBuilder extends Base
     protected $subFormBuilders = [];
 
     protected $_extraControlVar = 'form';
+    protected $_extraControlDefPlace = 'bottom/right';
 
-    public function build(ActiveRecord $model)
+    public function build(Model $model)
     {
+        $this->_checkBuilded();
+
         $this->_enumActiveQueries = [];
 
         $modelClass = get_class($model);
@@ -101,14 +105,17 @@ class FormBuilder extends Base
                 $allows[] = $attr;
             }
         }
+        $allows = array_merge($allows, $this->readyOnlyFields);
         $allows = array_merge($allows, $this->subObjects);
 
         if (null === $this->fields) {
 // XXX add subobject
             $this->fields = array_intersect($model->attributes(), $allows);
-            $this->fields = array_diff($this->fields, $this->modelClass::primaryKey());
-            $this->fields = array_diff($this->fields, $this->removeFields);
+            if (is_a($model, ActiveRecord::class)) {
+                $this->fields = array_diff($this->fields, $this->modelClass::primaryKey());
+            }
 
+            $this->fields = array_diff($this->fields, $this->removeFields);
             foreach ($this->addFieldsAfter as $afterField => $fields) {
                 if (!in_array($afterField, $this->fields)) {
                     continue;
@@ -243,7 +250,11 @@ class FormBuilder extends Base
             return $type;
         }
 
-        if (null !== ($type = $this->getControlTypeByDBColumn($attr))) {
+        if (in_array($attr, $this->readyOnlyFields)) {
+            return 'static';
+        }
+
+        if (is_a($model, ActiveRecord::class) && null !== ($type = $this->getControlTypeByDBColumn($attr))) {
             return $type;
         }
 
@@ -253,10 +264,6 @@ class FormBuilder extends Base
 
         if (in_array($attr, $this->enumFields) || isset($this->enumOptions[$attr])) {
             return 'select';
-        }
-
-        if (in_array($attr, $this->readyOnlyFields)) {
-            return 'static';
         }
 
         return $this->uptakeType($attr);
@@ -322,7 +329,7 @@ class FormBuilder extends Base
     {
         $str = '';
         foreach ($fields as $field) {
-            $str .= $this->field2string($field, $form, $model)->parts['{input}'];
+            $str .= (string) $this->field2string($field, $form, $model)->parts['{input}'];
         }
         return $str;
     }

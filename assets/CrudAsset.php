@@ -1,19 +1,24 @@
 <?php
 namespace app\modules\crud\assets;
 
-use yii\web\AssetBundle;
+use yii\bootstrap\BootstrapAsset;
+use yii\web\JqueryAsset;
 
 /**
  *
  */
-class CrudAsset extends AssetBundle {
-    public $sourcePath = __DIR__ . '/asset/css';
-
+class CrudAsset extends BaseAsset
+{
     public $css = [
-        'all.css',
+        'css/all.css',
+    ];
+
+    public $js = [
+        'js/submit-form-button.js',
     ];
 
     public $depends = [
-        'yii\bootstrap\BootstrapAsset',
+        BootstrapAsset::class,
+        JqueryAsset::class,
     ];
 }

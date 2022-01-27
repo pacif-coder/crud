@@ -70,8 +70,32 @@ class BackUrlBehavior extends Behavior {
     }
 
     public static function addBackUrl($urlTo) {
-        $urlTo[self::BACK_URL_PARAM] = Yii::$app->request->getUrl();
-        return $urlTo;
+        if (is_array($urlTo)) {
+            $urlTo[self::BACK_URL_PARAM] = Yii::$app->request->getUrl();
+            return $urlTo;
+        }
+
+        if (is_string($urlTo)) {
+            $parts = parse_url($urlTo);
+
+            $urlTo = [];
+            if (isset($parts['query'])) {
+                parse_str($parts['query'], $urlTo);
+            }
+
+            $urlTo[self::BACK_URL_PARAM] = Yii::$app->request->getUrl();
+
+            $url = '';
+            if ($parts['path']) {
+                $url .= $parts['path'];
+            }
+
+            if ($urlTo) {
+                $url .= '?' . http_build_query($urlTo);
+            }
+
+            return $url;
+        }
     }
 
     public function events() {

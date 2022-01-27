@@ -8,13 +8,15 @@ use yii\bootstrap\Html;
  * @XXX
  *
  */
-class Cancel extends Button {
+class Cancel extends Link
+{
     public $label = 'cancel';
 
     public $place = 'bottom/right';
 
-    public function html() {
+    public function getUrl()
+    {
         $view = Yii::$app->getView();
-        return Html::a($this->getContent(), $view->context->getBackUrl(), $this->getAttrs());
+        return $view->context->getBackUrl();
     }
 }

@@ -6,11 +6,10 @@ use yii\jui\JuiAsset;
 /**
  *
  */
-class DragableAsset extends \yii\web\AssetBundle {
-    public $sourcePath = __DIR__ . '/asset/';
-
+class DragableAsset extends \app\modules\crud\assets\BaseAsset
+{
     public $js = [
-        'dragable.js',
+        'js/dragable.js',
     ];
 
     public $depends = [

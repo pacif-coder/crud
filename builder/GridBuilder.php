@@ -4,19 +4,19 @@ namespace app\modules\crud\builder;
 use Yii;
 use yii\base\Event;
 use yii\data\ActiveDataProvider;
+use yii\helpers\ArrayHelper;
 use yii\validators\ExistValidator;
 
 use app\modules\crud\builder\Base;
+use app\modules\crud\grid\column\ActionLinkColumn;
+use app\modules\crud\grid\column\DragIconColumn;
 use app\modules\crud\grid\GridView;
 use app\modules\crud\grid\MatrixGridView;
 use app\modules\crud\grid\FilterModel;
-use app\modules\crud\models\ModelWithParentInterface;
-
-use app\modules\crud\grid\column\ActionLinkColumn;
 use app\modules\crud\helpers\ModelName;
 use app\modules\crud\helpers\ParentModel;
+use app\modules\crud\models\ModelWithParentInterface;
 use app\modules\crud\models\ModelWithOrderInterface;
-
 
 /**
  * XXX
@@ -29,14 +29,19 @@ class GridBuilder extends Base
 
     public $columns;
     public $removeColumns = [];
+    public $addColumnAfter = [];
     public $addColumnsAfter = [];
+    public $addColumnBefore = [];
+    public $addColumnsBefore = [];
     public $columnFormats;
+    public $columnOptions = [];
 
     public $defaultOrder;
     public $pageSize;
     public $gridWithEditLink = true;
     public $gridOptions = [];
     public $dragable;
+    public $addDragIconColumn = true;
 
     public $addToolbarButtons = [];
     public $removeToolbarButtons = [];
@@ -98,11 +103,14 @@ class GridBuilder extends Base
     protected $_isChangeGridOption = false;
 
     protected $_extraControlVar = 'grid';
+    protected $_extraControlDefPlace = 'title';
 
     protected static $_autoJoinI = 1;
 
     public function build($modelClass = null)
     {
+        $this->_checkBuilded();
+
         $this->_isExtraControlCreated = false;
         $this->_transformSortAttrMap = $this->_transformFilterAttrMap = [];
 
@@ -131,18 +139,53 @@ class GridBuilder extends Base
             $this->columns = $this->parseColumns($this->columns);
         }
 
-        $attrInColumns = array_keys($this->columns);
-        foreach ($this->addColumnsAfter as $afterAttr => $columns) {
-            if (!in_array($afterAttr, $attrInColumns)) {
+        $this->insertColumns();
+
+        foreach ($this->columns as $column => $desc) {
+            if (!isset($this->columnOptions[$column])) {
                 continue;
             }
 
-            $index = array_search($afterAttr, $attrInColumns);
-            if (false === $index) {
+            $desc = ArrayHelper::merge($desc, $this->columnOptions[$column]);
+            $this->columns[$column] = $desc;
+        }
+
+        // define column format
+        foreach ($this->columns as $column => $desc) {
+            if (isset($desc['format'])) {
                 continue;
             }
 
-            array_splice($this->columns, $index + 1, 0, [$columns]);
+            $attr = isset($desc['attribute'])? $desc['attribute'] : null;
+            if (null === $attr) {
+                continue;
+            }
+
+            $format = $this->getColumnFormat($attr, $this->modelClass);
+            if (null !== $format) {
+                $this->columns[$column]['format'] = $format;
+            }
+        }
+
+        if ($this->dragable) {
+            // off sort in table column
+            foreach ($this->columns as $column => $desc) {
+                if (!isset($desc['attribute'])) {
+                    continue;
+                }
+
+                $desc['enableSorting'] = false;
+                $this->columns[$column] = $desc;
+            }
+
+            $sortAttr = $this->modelClass::ORDER_ATTR;
+            if ($sortAttr && isset($this->columns[$sortAttr])) {
+                unset($this->columns[$sortAttr]);
+            }
+
+            if ($this->addDragIconColumn) {
+                $this->columns[] = ['class' => DragIconColumn::class];
+            }
         }
 
         $this->autoJoin();
@@ -175,30 +218,6 @@ class GridBuilder extends Base
             }
         }
 
-        // define column format
-        foreach ($this->columns as $column => $desc) {
-            if (isset($desc['format'])) {
-                continue;
-            }
-
-            $attr = isset($desc['attribute'])? $desc['attribute'] : null;
-            if (null === $attr) {
-                continue;
-            }
-
-            $format = $this->getColumnFormat($attr, $this->modelClass);
-            if (null !== $format) {
-                $this->columns[$column]['format'] = $format;
-            }
-        }
-
-        // off sort in table column
-        if ($this->dragable) {
-            foreach (array_keys($this->columns) as $column) {
-                $this->columns[$column]['enableSorting'] = false;
-            }
-        }
-
         if ($this->gridWithEditLink && $this->nameAttr) {
             $this->makeGridEditLink();
         }
@@ -211,6 +230,55 @@ class GridBuilder extends Base
         $this->createExtraControls();
 
         $this->afterBuild();
+    }
+
+    protected function insertColumns()
+    {
+        $afterColumns = array_keys($this->addColumnAfter);
+        $afterColumns = array_merge($afterColumns, array_keys($this->addColumnsAfter));
+        $afterColumns = array_unique($afterColumns);
+        foreach ($afterColumns as $afterColumn) {
+            $attrInColumns = array_keys($this->columns);
+            if (!in_array($afterColumn, $attrInColumns)) {
+                continue;
+            }
+
+            $index = array_search($afterColumn, $attrInColumns, true);
+            if (false === $index) {
+                continue;
+            }
+
+            if (isset($this->addColumnAfter[$afterColumn])) {
+                $insert = [$this->addColumnAfter[$afterColumn]];
+            } else {
+                $insert = $this->addColumnsAfter[$afterColumn];
+            }
+
+            array_splice($this->columns, $index + 1, 0, $insert);
+        }
+
+        $beforeColumns = array_keys($this->addColumnBefore);
+        $beforeColumns = array_merge($beforeColumns, array_keys($this->addColumnsBefore));
+        $beforeColumns = array_unique($beforeColumns);
+        foreach ($beforeColumns as $beforeColumn) {
+            $attrInColumns = array_keys($this->columns);
+            if (!in_array($beforeColumn, $attrInColumns)) {
+                continue;
+            }
+
+            $index = array_search($beforeColumn, $attrInColumns, true);
+            if (false === $index) {
+                continue;
+            }
+
+            if (isset($this->addColumnBefore[$beforeColumn])) {
+                $insert = [$this->addColumnBefore[$beforeColumn]];
+            } else {
+                $insert = $this->addColumnsBefore[$beforeColumn];
+            }
+
+            array_splice($this->columns, $index, 0, $insert);
+        }
     }
 
     protected function filterApply()
@@ -340,17 +408,21 @@ class GridBuilder extends Base
         }
 
         $modelClass = $this->modelClass;
+        $table = $modelClass::tableName();
         $this->query = $modelClass::find()->asArray(true);
 
         $parentModelAttr = ParentModel::getParentModelAttr($modelClass);
         if ($parentModelAttr) {
-            $table = $modelClass::tableName();
             $column = "[[{$table}]].[[{$parentModelAttr}]]";
             $this->query->andWhere([$column => $this->parentModelID]);
         }
 
         if ($this->dragable) {
             $this->query->orderBy([$this->modelClass::ORDER_ATTR => SORT_ASC]);
+        }
+
+        if (!$this->query->select) {
+            $this->query->addSelect("[[{$table}]].*");
         }
 
         return $this->query;
@@ -558,7 +630,8 @@ class GridBuilder extends Base
         $result = [];
         foreach ($columns as $column => $desc) {
             if (is_string($desc)) {
-                $result[$desc] = $this->parseColumnDesc($desc);
+                $desc = $this->parseColumnDesc($desc);
+                $result[$desc['attribute']] = $desc;
             } elseif (!isset($desc['attribute']) && !is_int($column)) {
                 $desc['attribute'] = $column;
                 $result[$column] = $desc;

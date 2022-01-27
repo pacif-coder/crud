@@ -5,7 +5,8 @@ namespace app\modules\crud\controls;
  * @XXX
  *
  */
-class Save extends Button {
+class Save extends Base
+{
     public $label = 'save';
 
     public $icon = 'ok';

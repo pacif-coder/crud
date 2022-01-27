@@ -7,12 +7,13 @@ use yii\helpers\Json;
 /**
  *
  */
-class CheckboxColumn extends \yii\grid\CheckboxColumn {
+class CheckboxColumn extends \yii\grid\CheckboxColumn
+{
     public $headerOptions = ['class' => 'checkbox-column'];
 
-    public $checkedActions = [];
-
     public $checkPermission = null;
+
+    public $checkboxOptions = ['data-role' => 'checkbox-column'];
 
     protected function renderDataCellContent($model, $key, $index) {
         if ($this->checkboxOptions instanceof Closure) {

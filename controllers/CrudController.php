@@ -2,90 +2,43 @@
 namespace app\modules\crud\controllers;
 
 use Yii;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
+use yii\web\BadRequestHttpException;
 use yii\base\InvalidConfigException;
-use yii\base\Theme;
-use yii\helpers\Url;
 
-use app\modules\crud\models\ModelWithParentInterface;
-use app\modules\crud\behaviors\BackUrlBehavior;
-
-use app\modules\crud\widgets\Breadcrumbs;
-
-use app\modules\crud\builder\FormBuilder;
-use app\modules\crud\builder\GridBuilder;
 use app\modules\crud\helpers\ClassI18N;
 use app\modules\crud\helpers\ParentModel;
-use app\modules\crud\assets\CrudAsset;
-
-use app\modules\crud\Module as CrudModule;
+use app\modules\crud\helpers\ModelName;
+use app\modules\crud\models\ModelWithParentInterface;
+use app\modules\crud\widgets\Breadcrumbs;
 
 /**
- * Default controller for the `admin` module
+ * Default controller for the CRUD module
  *
- * @property View|\yii\web\View $view The view object that can be used to render views or view files.
+ * @property string $title Page title
  */
-class CrudController extends Controller
+abstract class CrudController extends BaseController
 {
-    use ControllerTrait {
-        ControllerTrait::init as traitInit;
-    }
-
     public $modelClass;
-    public $messageCategory;
     public $modelSearchClass;
-
-    public $addCreateButton = true;
 
     public $parentModelID;
 
-    /**
-     * @var \app\modules\crud\builder\GridBuilder
-     */
-    protected $gridBuilder;
-
-    protected $gridBuilderEvent = [
-        GridBuilder::EVENT_BEFORE_BUILD => 'beforeGridBuild',
-        GridBuilder::EVENT_AFTER_BUILD => 'afterGridBuild',
-        GridBuilder::EVENT_BEFORE_FILTER_APPLY => 'beforeFilterApply',
-    ];
-
-    /**
-     * @var \app\modules\crud\builder\FormBuilder
-     */
-    protected $formBuilder;
-
-    protected $formBuilderEvent = [
-        FormBuilder::EVENT_BEFORE_BUILD => 'beforeFormBuild',
-        FormBuilder::EVENT_AFTER_BUILD => 'afterFormBuild',
-    ];
-
-    public function behaviors()
-    {
-        $behaviors = parent::behaviors();
-        $behaviors['backUrl'] = BackUrlBehavior::class;
-
-        return $behaviors;
-    }
-
     public function init()
     {
-        parent::init();
-
         if (!$this->modelClass) {
             throw new InvalidConfigException('Not find model class');
         }
 
-        if (!$this->messageCategory && $this->modelClass) {
+        parent::init();
+
+        if (!$this->messageCategory) {
             $this->messageCategory = ClassI18N::class2messagesPath($this->modelClass);
         }
 
         if (is_subclass_of($this->modelClass, ModelWithParentInterface::class)) {
             $this->parentModelID = $this->getModelID();
         }
-
-        $this->traitInit();
     }
 
     /**
@@ -95,7 +48,7 @@ class CrudController extends Controller
     public function actionIndex()
     {
         // build grid
-        $builder = $this->createGrid();
+        $builder = $this->buildGrid();
 
         $this->createIndexTitle();
 
@@ -106,18 +59,10 @@ class CrudController extends Controller
         return $this->render('index', compact(['builder']));
     }
 
-    protected function getGridBuilder($withCopy = true)
+    protected function createIndexTitle()
     {
-        if ($this->gridBuilder) {
-            return $this->gridBuilder;
-        }
-
-        $this->gridBuilder = new GridBuilder();
-        if ($withCopy) {
-            $this->gridBuilder->controller2this($this);
-        }
-
-        return $this->gridBuilder;
+        $model = $this->createModel();
+        $this->title = $this->t('List items', $this->getTitleParams($model));
     }
 
     /**
@@ -143,14 +88,48 @@ class CrudController extends Controller
     }
 
     /**
-     * Sort 
+     * Create and edit object nodel
+     * @param string $id
+     * @return mixed
+     * @throws NotFoundHttpException if the model cannot be found
+     */
+    protected function _actionEdit($create)
+    {
+        $model = $create? $this->createModel() : $this->findModel();
+
+        $builder = $this->buildForm($model);
+        if ($builder->data2model($this->request->post(), $model)) {
+            return $this->goBack();
+        }
+
+        $this->createEditTitle($create, $model);
+
+        $this->createEditBreadcrumbs($model);
+
+        return $this->render('edit', compact(['model', 'builder']));
+    }
+
+    protected function createEditTitle($isCreate, $model)
+    {
+        $params = $this->getTitleParams($model);
+        if ($isCreate) {
+            $this->title = $this->t('Create item');
+        } elseif (isset($params['nameAttribute'])) {
+            $this->title = $this->t('Update item "{nameAttribute}"', $params);
+        } else {
+            $this->title = $this->t('Update item');
+        }
+    }
+
+    /**
+     * Sort
      * @return mixed
      */
     public function actionSort()
     {
-        $sort = Yii::$app->request->post('sort', []);
+        $sort = $this->request->post('sort', []);
 
-        $builder = $this->createGrid();
+        $builder = $this->buildGrid();
 
         $provider = $builder->getProvider();
         $begin = 0;
@@ -184,114 +163,37 @@ class CrudController extends Controller
     protected function actionRead()
     {
         $model = $this->findModel();
+        $this->createReadTitle($model);
+
         $builder = $this->getFromBuilder();
-
-        $this->createReadTitle();
-
         return $this->render('read', compact(['model', 'builder']));
     }
 
-    /**
-     * Create and edit object nodel
-     * @param string $id
-     * @return mixed
-     * @throws NotFoundHttpException if the model cannot be found
-     */
-    protected function _actionEdit($create)
+    protected function createReadTitle($model)
     {
-        $model = $create? $this->createModel() : $this->findModel();
-
-        $builder = $this->createForm($model);
-        if ($builder->data2model(Yii::$app->request->post(), $model)) {
-            return $this->goBack();
-        }
-
-        // $this->addParentToBreadcrumbs($model);
-
-        $view = $this->getView();
-        $br = new Breadcrumbs();
-        $view->params['breadcrumbs'] = $br->createEditBreadcrumbs($model, $this->getBackUrl());
-
-        $this->createEditTitle($create, $model);
-
-        return $this->render('edit', compact(['model', 'builder']));
-    }
-
-    protected function createForm($model)
-    {
-        $builder = $this->getFromBuilder();
-
-        // call model event callback first
-        $builder->bindEventsHandler($model, $this->formBuilderEvent);
-
-        // call controller event callback second
-        $builder->bindEventsHandler($this, $this->formBuilderEvent);
-
-        // build form description
-        $builder->build($model);
-
-        return $builder;
-    }
-
-    protected function createGrid()
-    {
-        $builder = $this->getGridBuilder();
-
-        // call model class event callback first
-        $builder->bindEventsHandler($this->modelClass, $this->gridBuilderEvent);
-
-        // call controller event callback
-        $builder->bindEventsHandler($this, $this->gridBuilderEvent);
-
-        // build grid description
-        $builder->build();
-
-        return $builder;
-    }
-
-    protected function createEditTitle($isCreate, $model)
-    {
-        $view = $this->getView();
-        $builder = $this->getFromBuilder();
-
-        if ($isCreate) {
-            $view->title = Yii::t($this->messageCategory, 'Create item');
-        } elseif ($builder->nameAttr) {
-            $name = $builder->nameAttr;
-            $view->title = Yii::t($this->messageCategory, 'Update item "{nameAttribute}"', ['nameAttribute' => $model->{$name}]);
+        $params = $this->getTitleParams($model);
+        if (isset($params['nameAttribute'])) {
+            $this->title = $this->t('Show item "{nameAttribute}"', $params);
         } else {
-            $view->title = Yii::t($this->messageCategory, 'Update item');
+            $this->title = $this->t('Show item');
         }
     }
 
-    protected function createReadTitle()
+    protected function getTitleParams($model)
     {
-        $view = $this->getView();
-        $builder = $this->getFromBuilder();
-
-        if ($builder->nameAttr) {
-            $name = $builder->nameAttr;
-            $view->title = Yii::t($this->messageCategory, 'Show item "{nameAttribute}"', ['nameAttribute' => $model->{$name}]);
-        } else {
-            $view->title = Yii::t($this->messageCategory, 'Show item');
-        }
-    }
-
-    protected function createIndexTitle()
-    {
-        $model = $this->createModel();
-        $parents = ParentModel::loadParents($model);
-
         $params = [];
-        if ($parents) {
-            $params = [
-                'parentModelName' => end($parents)['parentName'],
-                'nameAttribute' => end($parents)['name'],
-            ];
+
+        $name = ModelName::getName($model);
+        if ($name) {
+            $params['nameAttribute'] = ModelName::getName($model);
         }
 
-        $view = $this->getView();
-        $view->title = Yii::t($this->messageCategory, 'List items', $params);
+        $parents = ParentModel::loadParents($model);
+        if ($parents) {
+            $params['parentModelName'] = end($parents)['name'];
+        }
+
+        return $params;
     }
 
     protected function addParentToBreadcrumbs($model)
@@ -310,18 +212,12 @@ class CrudController extends Controller
                 Yii::t($this->messageCategory, 'List items', $params));
     }
 
-    protected function getFromBuilder($withCopy = true)
+    protected function createEditBreadcrumbs($model)
     {
-        if ($this->formBuilder) {
-            return $this->formBuilder;
-        }
+        $br = new Breadcrumbs();
 
-        $this->formBuilder = new FormBuilder();
-        if ($withCopy) {
-            $this->formBuilder->controller2this($this);
-        }
-
-        return $this->formBuilder;
+        $view = $this->getView();
+        $view->params['breadcrumbs'] = $br->createEditBreadcrumbs($model, $this->getBackUrl());
     }
 
     /**
@@ -333,7 +229,7 @@ class CrudController extends Controller
      */
     public function actionDelete()
     {
-        $selection = Yii::$app->request->post('selection', []);
+        $selection = $this->request->post('selection', []);
 
         $modelClass = $this->modelClass;
         foreach ($modelClass::findAll($selection) as $model) {
@@ -343,7 +239,7 @@ class CrudController extends Controller
                 continue;
             }
 
-            Yii::$app->session->setFlash('danger', implode("\r\n", $model->getErrorSummary(true)));
+            $this->addFlashMessage('danger', implode("\r\n", $model->getErrorSummary(true)));
             break;
         }
 
@@ -389,36 +285,11 @@ class CrudController extends Controller
 
     public function getModelID()
     {
-        return Yii::$app->request->get('id');
-    }
+        $id = $this->request->get('id');
+        if (!empty($id) && !is_scalar($id)) {
+            throw new BadRequestHttpException("Param 'id' mast have scalar value");
+        }
 
-    protected function beforeFilterApply(\yii\base\Event $event)
-    {
-        /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
-        $gridBuilder = $event->sender;
-    }
-
-    protected function beforeGridBuild(\yii\base\Event $event)
-    {
-        /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
-        $gridBuilder = $event->sender;
-    }
-
-    protected function afterGridBuild(\yii\base\Event $event)
-    {
-        /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
-        $gridBuilder = $event->sender;
-    }
-
-    protected function beforeFormBuild(\yii\base\Event $event)
-    {
-        /* @var $formBuilder \app\modules\crud\builder\FormBuilder */
-        $formBuilder = $event->sender;
-    }
-
-    protected function afterFormBuild(\yii\base\Event $event)
-    {
-        /* @var $formBuilder \app\modules\crud\builder\FormBuilder */
-        $formBuilder = $event->sender;
+        return $id;
     }
 }

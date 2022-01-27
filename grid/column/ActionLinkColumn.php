@@ -9,12 +9,27 @@ use yii\helpers\Html;
  */
 class ActionLinkColumn extends \yii\grid\DataColumn
 {
-    use ActionLinkTrait;
+    use ActionLinkTrait, TruncateColumnTrait;
+
+    /**
+     * @var string
+     */
+    public $action = 'update';
 
     /**
      * @var string
      */
     public $linkText;
+
+    /**
+     * @var string
+     */
+    public $truncateClass;
+
+    /**
+     * @var string
+     */
+    public $addLinkClass;
 
     protected function renderDataCellContent($model, $key, $index)
     {
@@ -29,6 +44,13 @@ class ActionLinkColumn extends \yii\grid\DataColumn
         }
 
         $url = $this->createUrl($this->action, $model, $key, $index);
-        return Html::a($text, $url);
+
+        $attrs = [];
+        if ($this->addLinkClass) {
+            Html::addCssClass($attrs, $this->addLinkClass);
+        }
+
+        $str = Html::a($text, $url, $attrs);
+        return $this->truncateContent($str);
     }
 }

@@ -13,6 +13,7 @@ use app\modules\crud\helpers\ClassI18N;
 class Breadcrumbs
 {
     protected $parents;
+
     protected $breadcrumbs = [];
 
     protected $urlParams;
@@ -21,25 +22,38 @@ class Breadcrumbs
     {
         $parents = ParentModel::loadParents($model);
 
-        end($parents);
-        $lastIndex = key($parents);
-        foreach ($parents as $i => $modelData) {
-            if ($lastIndex == $i) {
-                continue;
+        $parent = null;
+        if ($parents) {
+            $begin = reset($parents);
+            $this->modelData2breadcrumbs($begin, true);
+
+            $parent = end($parents);
+            $lastIndex = key($parents);
+            foreach ($parents as $i => $modelData) {
+                if ($lastIndex == $i) {
+                    break;
+                }
+
+                $this->modelData2breadcrumbs($modelData);
             }
 
-            $this->modelData2breadcrumbs($modelData);
+            $parent = $modelData;
         }
 
-        $messageCategory = ClassI18N::class2messagesPath(get_class($model));
-        $params = [
-            'parentModelName' => end($parents)['parentName'],
-            'nameAttribute' => end($parents)['name'],
-        ];
+        $modelClass = get_class($model);
+        $messageCategory = ClassI18N::class2messagesPath($modelClass);
+        $params = $parent? ['parentModelName' => $parent['name']] : [];
         $linkText = Yii::t($messageCategory, 'List items', $params);
 
         $urlParams = $this->initUrlParams();
-        $urlParams['id'] = end($parents)['id'];
+        $controller = Yii::$app->class2controller->getController($modelClass);
+        if ($controller) {
+            $urlParams[0] = "{$controller}/{$urlParams[0]}";
+        }
+
+        if ($parent) {
+            $urlParams['id'] = $parent['id'];
+        }
 
         $this->breadcrumbs[] = [
             'url' => Url::toRoute($urlParams),
@@ -66,7 +80,7 @@ class Breadcrumbs
         return $this->breadcrumbs;
     }
 
-    protected function modelData2breadcrumbs($modelData)
+    protected function modelData2breadcrumbs($modelData, $dropID = false)
     {
         $messageCategory = ClassI18N::class2messagesPath($modelData['class']);
         $params = [
@@ -76,7 +90,16 @@ class Breadcrumbs
         $linkText = Yii::t($messageCategory, 'List items', $params);
 
         $urlParams = $this->initUrlParams();
-        $urlParams['id'] = $modelData['id'];
+        if (!$dropID) {
+            $urlParams['id'] = $modelData['id'];
+        } elseif (isset($urlParams['id'])) {
+            unset($urlParams['id']);
+        }
+
+        $controller = Yii::$app->class2controller->getController($modelData['class']);
+        if ($controller) {
+            $urlParams[0] = "{$controller}/{$urlParams[0]}";
+        }
 
         $this->breadcrumbs[] = [
             'url' => Url::toRoute($urlParams),
@@ -93,6 +116,10 @@ class Breadcrumbs
         $urlParams = Yii::$app->request->get();
         if (isset($urlParams['back-url'])) {
             unset($urlParams['back-url']);
+        }
+
+        if (isset($urlParams['page'])) {
+            unset($urlParams['page']);
         }
 
         $urlParams[0] = 'index';

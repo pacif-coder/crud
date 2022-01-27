@@ -6,9 +6,8 @@ use yii\jui\JuiAsset;
 /**
  *
  */
-class GridToolbarButtonAsset extends \yii\web\AssetBundle {
-    public $sourcePath = __DIR__ . '/asset/';
-
+class GridToolbarButtonAsset extends \app\modules\crud\assets\BaseAsset
+{
     public $js = [
         'js/grid-button.js',
     ];

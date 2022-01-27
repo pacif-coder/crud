@@ -11,7 +11,7 @@ use app\modules\crud\controls\CopyMessageCategoryInterface;
  * @XXX
  *
  */
-class Create extends Button implements CopyMessageCategoryInterface
+class Create extends Link implements CopyMessageCategoryInterface
 {
     public $label = 'Create item';
     public $place = 'title';
@@ -19,13 +19,12 @@ class Create extends Button implements CopyMessageCategoryInterface
     public $colorClass = 'btn-success';
     public $icon = 'plus';
 
-    public function html()
+    public function getUrl()
     {
         // put on first place action 'create' name
         $get = Yii::$app->request->get();
-        array_splice($get, 0, 0, 'create');
+        $get[0] = 'create';
 
-        $url = BackUrlBehavior::addBackUrl($get);
-        return Html::a($this->getContent(), $url, $this->getAttrs());
+        return BackUrlBehavior::addBackUrl($get);
     }
 }

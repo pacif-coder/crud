@@ -21,7 +21,7 @@ trait ActionLinkTrait
     /**
      * @var array
      */
-    public $removeParams = ['sort'];
+    public $removeParams = ['sort', 'page'];
 
     /**
      * Add 'back-url' param in url
@@ -99,7 +99,8 @@ trait ActionLinkTrait
             $params[$this->urlKey] = (string) $key;
         }
 
-        $params[0] = $this->controller ? $this->controller . '/' . $action : $action;
+        $controller = $this->getController($model);
+        $params[0] = $controller? "{$controller}/{$action}" : $action;
 
         if ($this->backUrl) {
             $params = BackUrlBehavior::addBackUrl($params);
@@ -119,5 +120,15 @@ trait ActionLinkTrait
         }
 
         return $this->checkPermission;
+    }
+
+    protected function getController($model)
+    {
+        if ($this->controller) {
+            return $this->controller;
+        }
+
+        $modelClass = $this->grid->dataProvider->query->modelClass;
+        return Yii::$app->class2controller->getController($modelClass);
     }
 }

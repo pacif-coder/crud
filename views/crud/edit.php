@@ -18,6 +18,6 @@ use yii\web\View;
     echo $this->render('include/fields', compact(['form', 'builder', 'model']));
 
     echo $this->render('include/bottom-buttons', compact(['builder']));
-    ActiveForm::end();
+    $formClass::end();
     ?>
 </div>

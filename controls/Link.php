@@ -8,10 +8,17 @@ use yii\bootstrap\Html;
  * @XXX
  *
  */
-class Link extends Button {
+class Link extends Base
+{
     public $url;
 
-    public function html() {
-        return Html::a($this->getContent(), $this->url, $this->getAttrs());
+    public function html()
+    {
+        return Html::a($this->getContent(), $this->getUrl(), $this->getAttrs());
+    }
+
+    public function getUrl()
+    {
+        return $this->url? : parent::getUrl();
     }
 }

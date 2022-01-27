@@ -1,20 +1,20 @@
 <?php
 namespace app\modules\crud\grid;
 
-use yii\web\AssetBundle;
+use yii\web\YiiAsset;
+use yii\bootstrap\BootstrapAsset;
 
 /**
  *
  */
-class GridViewAsset extends AssetBundle {
-    public $sourcePath = __DIR__ . '/asset';
-
+class GridViewAsset extends \app\modules\crud\assets\BaseAsset
+{
     public $css = [
         'css/grid.css',
     ];
 
     public $depends = [
-        'yii\web\YiiAsset',
-        'yii\bootstrap\BootstrapAsset',
+        YiiAsset::class,
+        BootstrapAsset::class,
     ];
 }

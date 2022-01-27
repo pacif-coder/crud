@@ -7,7 +7,8 @@ use app\modules\crud\helpers\ClassI18N;
  * @XXX
  *
  */
-class Button extends \app\modules\crud\controls\Button {
+class Button extends \app\modules\crud\controls\Base
+{
     public $grid;
 
     public $sizeClass = 'btn-xs';

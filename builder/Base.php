@@ -23,7 +23,8 @@ use ReflectionClass;
  * XXX
  *
  */
-class Base extends \yii\base\Component {
+class Base extends \yii\base\Component
+{
     public $modelClass;
 
     public $fields;
@@ -109,6 +110,7 @@ class Base extends \yii\base\Component {
         'extraControlOptions',
         'fieldType2widget',
         'fieldType2widgetOptions',
+        'fieldType2fieldMethod',
         'form',
     ];
 
@@ -122,6 +124,8 @@ class Base extends \yii\base\Component {
     protected $_extraControlsByPlace;
 
     protected $_enumActiveQueries = [];
+
+    protected $_builded;
 
     public function controller2this($controller, $prefix = 'fb_')
     {
@@ -173,6 +177,10 @@ class Base extends \yii\base\Component {
 
         $thisVars = array_keys(get_object_vars($this));
         foreach (array_intersect(array_keys($source), $thisVars) as $param) {
+            if (is_array($this->{$param}) && null === $source[$param]) {
+                $source[$param] = [];
+            }
+
             if (in_array($param, $this->mergeAsArray)) {
                 $this->{$param} = array_merge($this->{$param}, $source[$param]);
             } else {
@@ -335,6 +343,15 @@ class Base extends \yii\base\Component {
         }
     }
 
+    protected function _checkBuilded()
+    {
+        if ($this->_builded) {
+            throw new Exception('Allready builded');
+        }
+
+        $this->_builded = true;
+    }
+
     public function dropExtraControls()
     {
         $this->_isExtraControlCreated = false;
@@ -354,13 +371,7 @@ class Base extends \yii\base\Component {
         $this->_extraControlsByPlace = null;
 
         $extraControlVar = "{$this->_extraControlVar}ExtraControls";
-
         $extraControls = array_merge($this->{$extraControlVar}, $this->addExtraControls);
-        foreach ($extraControls as $i => $control) {
-            if (in_array($control, $this->removeExtraControls)) {
-                unset($extraControls[$i]);
-            }
-        }
 
         $this->{$extraControlVar} = [];
         foreach ($extraControls as $place => $control) {
@@ -392,6 +403,14 @@ class Base extends \yii\base\Component {
 
             if (!is_int($place) && (!isset($control['place']) || !$control['place'])) {
                 $control['place'] = $place;
+            }
+
+            if (!isset($control['name']) && isset($control['action'])) {
+                $control['name'] = $control['action'];
+            }
+
+            if (in_array($control['name'], $this->removeExtraControls)) {
+                continue;
             }
 
             if (isset($control['name']) && $control['name']) {
@@ -514,10 +533,26 @@ class Base extends \yii\base\Component {
             $type = 'staticControl';
         }
 
+        $isEnum = false;
+        $items = null;
+        if (in_array($field, $this->enumFields) || isset($this->enumOptions[$field])) {
+            $isEnum = true;
+            $items = isset($this->enumOptions[$field]) ? $this->enumOptions[$field] : [];
+        }
+
+        // special case - boolean data is output only for reads
+        // use booleanFormat in formatter
+        if (in_array($field, $this->readyOnlyFields) && $isEnum &&
+                !array_key_exists('value', $fieldOptions)) {
+
+            $value = $items[$model->{$field}];
+            $fieldOptions['value'] = $value;
+            $type = 'staticControl';
+        }
+
         $typeOptions = isset($this->fieldType2widgetOptions[$type]) ? $this->fieldType2widgetOptions[$type] : [];
         $options = array_merge($typeOptions, $fieldOptions);
 
-        /* @var $control \yii\bootstrap\ActiveField */
         $publicProperties = $this->_receivePublicProperties($form, $model, $field);
         $activeFieldOptions = $this->_splitOptions($options, $publicProperties);
 
@@ -530,13 +565,6 @@ class Base extends \yii\base\Component {
 
         if (isset($this->fieldHint[$field])) {
             $control->hint($this->fieldHint[$field]);
-        }
-
-        $isEnum = false;
-        $items = null;
-        if (in_array($field, $this->enumFields) || isset($this->enumOptions[$field])) {
-            $isEnum = true;
-            $items = isset($this->enumOptions[$field]) ? $this->enumOptions[$field] : [];
         }
 
         $widget = isset($this->fieldType2widget[$type]) ? $this->fieldType2widget[$type] : null;
@@ -567,6 +595,10 @@ class Base extends \yii\base\Component {
         }
 
         if ($method) {
+            if ('password' == $type) {
+                $options['autocomplete'] = 'off';
+            }
+
             return $control->{$method}($options);
         }
 
@@ -625,6 +657,8 @@ class Base extends \yii\base\Component {
     {
         Html::addCssClass($control->options, 'no-required');
         $control->enableClientValidation = false;
+
+        $options['id'] = Html::getInputId($control->model, $control->attribute);
 
         return $control->staticControl($options);
     }
