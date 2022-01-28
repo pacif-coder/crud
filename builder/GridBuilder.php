@@ -557,8 +557,19 @@ class GridBuilder extends Base
             $column = $dbColumns[$attr];
 
             /**@var $column \yii\db\ColumnSchema  **/
-            if ('text' == $column->dbType) {
-                return 'ntext';
+            switch ($column->type) {
+                case 'datetime':
+                case 'date':
+                case 'time':
+                case 'timestamp':
+                case 'decimal':
+                case 'integer':
+                    return $column->type;
+                    break;
+
+                case 'text':
+                    return 'ntext';
+                    break;
             }
         }
 
