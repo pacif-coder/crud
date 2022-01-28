@@ -19,12 +19,10 @@ class Create extends Link implements CopyMessageCategoryInterface
     public $colorClass = 'btn-success';
     public $icon = 'plus';
 
+    public $action = 'create';
+
     public function getUrl()
     {
-        // put on first place action 'create' name
-        $get = Yii::$app->request->get();
-        $get[0] = 'create';
-
-        return BackUrlBehavior::addBackUrl($get);
+        return BackUrlBehavior::addBackUrl(parent::getUrl());
     }
 }
