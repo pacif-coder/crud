@@ -3,6 +3,7 @@
     h1 {
         margin-top: 0;
         margin-bottom: 0.5em;
+        overflow: hidden;
 
         & > a {
             position: relative;
@@ -29,7 +30,11 @@
         }
     }
 
-    .buttons-right {margin-top: 0.4em; float: right; padding-left: 1em;}
+    .buttons-right {
+        margin-top: 0.4em;
+        float: right;
+        padding-left: 1em;
+    }
 
     .btn + .btn {
         margin-left: 5px;
