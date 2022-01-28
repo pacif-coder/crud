@@ -49,13 +49,17 @@ class FileInput extends InputWidget
         $trashButtonAttrs = ['data-role' => 'remove', 'data-confirm' => 'Удалить?'];
         $value = Html::getAttributeValue($this->model, $this->attribute);
         if ($this->hasModel() && $value) {
-            $link = Html::a($value, $this->model->getWebLink2attachment(), ['target' => '_new']);
+            if ($this->model->hasMethod('getWebLink2attachment')) {
+                $link = Html::a($value, $this->model->getWebLink2attachment(), ['target' => '_new']);
 
-            $trashButtonAttrs['data-fill'] = 'true';
-            $trash = Html::tag('span', Html::icon('trash'), $trashButtonAttrs);
+                $trashButtonAttrs['data-fill'] = 'true';
+                $trash = Html::tag('span', Html::icon('trash'), $trashButtonAttrs);
 
-            $str .= Html::tag('div', $link . $trash);
-            $str .= $fileInput;
+                $str .= Html::tag('div', $link . $trash);
+                $str .= $fileInput;
+            } else {
+                $str = $fileInput;
+            }
         } else {
             $trashButtonAttrs['class'] = 'hidden';
             $trash = Html::tag('span', Html::icon('trash'), $trashButtonAttrs);
