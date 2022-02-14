@@ -32,6 +32,7 @@ $(document).ready(function () {
 
             var text = $(this).data('confirmMessage');
             if (text && !window.confirm(text)) {
+                $(this).blur();
                 return;
             }
 
