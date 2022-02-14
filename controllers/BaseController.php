@@ -4,6 +4,8 @@ namespace app\modules\crud\controllers;
 use Yii;
 use yii\base\Theme;
 use yii\helpers\Url;
+use yii\web\BadRequestHttpException;
+use yii\web\NotFoundHttpException;
 
 use app\modules\crud\Module as CrudModule;
 use app\modules\crud\assets\CrudAsset;
@@ -180,6 +182,27 @@ abstract class BaseController extends \yii\web\Controller
     protected function t($message, $params = [], $language = null)
     {
         return Yii::t($this->messageCategory, $message, $params, $language);
+    }
+
+    protected function _findModel($class, $id, $exception404 = true)
+    {
+        $this->testID($id);
+
+        $model = $class::findOne($id);
+        if (null !== $model) {
+            return $model;
+        }
+
+        if ($exception404) {
+            throw new NotFoundHttpException('The requested model does not exist.');
+        }
+    }
+
+    protected function testID($id)
+    {
+        if (!empty($id) && !is_scalar($id)) {
+            throw new BadRequestHttpException("Param 'id' mast have scalar value");
+        }
     }
 
     protected function beforeFilterApply(\yii\base\Event $event)

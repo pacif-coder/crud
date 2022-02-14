@@ -3,7 +3,6 @@ namespace app\modules\crud\controllers;
 
 use Yii;
 use yii\web\NotFoundHttpException;
-use yii\web\BadRequestHttpException;
 use yii\base\InvalidConfigException;
 
 use app\modules\crud\helpers\ClassI18N;
@@ -254,16 +253,9 @@ abstract class CrudController extends BaseController
      * @return \yii\db\ActiveRecord the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function findModel($exception = true)
+    protected function findModel($exception404 = true)
     {
-        $model = $this->modelClass::findOne($this->getModelID());
-        if (null !== $model) {
-            return $model;
-        }
-
-        if ($exception) {
-            throw new NotFoundHttpException('The requested model does not exist.');
-        }
+        return $this->_findModel($this->modelClass, $this->getModelID(), $exception404);
     }
 
     /**
@@ -285,11 +277,6 @@ abstract class CrudController extends BaseController
 
     public function getModelID()
     {
-        $id = $this->request->get('id');
-        if (!empty($id) && !is_scalar($id)) {
-            throw new BadRequestHttpException("Param 'id' mast have scalar value");
-        }
-
-        return $id;
+        return $this->request->get('id');
     }
 }
