@@ -1,11 +1,10 @@
 <?php
 namespace app\modules\crud\controls;
 
-use Yii;
 use yii\bootstrap\Html;
 
 /**
- * @XXX
+ * Link as button
  *
  */
 class Link extends Base

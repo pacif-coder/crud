@@ -5,6 +5,7 @@ use Yii;
 use yii\bootstrap\Html;
 use yii\helpers\Url;
 
+use app\modules\crud\behaviors\BackUrlBehavior;
 use app\modules\crud\helpers\ClassI18N;
 
 use ReflectionClass;
@@ -14,10 +15,13 @@ use ReflectionClass;
  *
  */
 class Base extends \yii\base\BaseObject
+implements CopyMessageCategoryInterface
 {
     public $align;
 
-    public $label = '';
+    public $label;
+
+    public $title;
 
     public $place;
 
@@ -39,16 +43,34 @@ class Base extends \yii\base\BaseObject
 
     public $controller;
 
+    public $modelClass;
+
+    public $checkPermission;
+
+    public $params;
+
+    public $removeParams;
+
+    public $backUrl;
+
+    public $isShow = true;
+
+    public $disabled;
+
     public $options = [];
 
     protected static $isAddAction;
+
+    protected static $isUseDefMessageCategory;
+
+    protected static $defMessageCategory;
 
     public function init()
     {
         parent::init();
 
-        if (!$this->messageCategory) {
-            $this->messageCategory = ClassI18N::class2messagesPath('app\modules\crud\controls\Button');
+        if (!self::$defMessageCategory) {
+            self::$defMessageCategory = ClassI18N::class2messagesPath('app\modules\crud\controls\Button');
         }
     }
 
@@ -59,14 +81,41 @@ class Base extends \yii\base\BaseObject
             $content .= Html::icon($this->icon) . ' ';
         }
 
-        if (!$this->label) {
-            $ref = new ReflectionClass($this);
-            $this->label = lcfirst($ref->getShortName());
-        }
+        $category = static::$isUseDefMessageCategory? static::$defMessageCategory : $this->messageCategory;
+        $label = Yii::t($category, $this->getLabel());
 
-        $content .= Yii::t($this->messageCategory, $this->label);
+        $content .= $label;
 
         return $content;
+    }
+
+    public function getLabel()
+    {
+        if ($this->label) {
+            return $this->label;
+        }
+
+        if ($this->action) {
+            return $this->label = ucfirst(str_replace('-', ' ', $this->action));
+        }
+
+        if ($this->controller) {
+            return $this->label = ucfirst(str_replace('-', ' ', $this->controller));
+        }
+
+        $ref = new ReflectionClass($this);
+        return $this->label = lcfirst($ref->getShortName());
+    }
+
+    public function getName()
+    {
+        if ($this->name) {
+            return $this->name;
+        }
+
+        if ($this->action) {
+            return $this->name = $this->action;
+        }
     }
 
     public function html()
@@ -90,13 +139,10 @@ class Base extends \yii\base\BaseObject
         Html::addCssClass($attrs, $this->colorClass);
         Html::addCssClass($attrs, $this->sizeClass);
 
-        if ($this->name) {
-            $attrs['id'] = $this->name;
-        } elseif ($this->action) {
-            $attrs['id'] = $this->action;
-        }
+        $attrs['id'] = $this->getName();
 
         $this->addActionAttr($attrs);
+        $this->addDisabledAttr($attrs);
 
         return $attrs;
     }
@@ -113,24 +159,63 @@ class Base extends \yii\base\BaseObject
 
     public function getUrl()
     {
-        if (!$this->action) {
+        if (null === $this->action && null === $this->controller && null === $this->modelClass) {
             return;
         }
 
         $get = Yii::$app->request->get();
 
-        if ($this->controller) {
-            $get[0] = $this->controller . '/' . $this->action;
+        foreach ((array) $this->removeParams as $removeParam) {
+            if (isset($get[$removeParam])) {
+                unset($get[$removeParam]);
+            }
+        }
+
+        foreach ((array) $this->params as $param => $value) {
+            $get[$param] = $value;
+        }
+
+        $controller = $this->getController();
+        if ($controller) {
+            $get[0] = $controller . '/' . $this->action;
         } else {
             $get[0] = $this->action;
+        }
+
+        if ($this->backUrl) {
+            $get = BackUrlBehavior::addBackUrl($get);
         }
 
         return Url::to($get);
     }
 
+    protected function getController()
+    {
+        if ($this->controller) {
+            return $this->controller;
+        }
+
+        if ($this->modelClass) {
+            return Yii::$app->class2controller->getController($this->modelClass);
+        }
+    }
+
+    protected function addDisabledAttr(&$attrs)
+    {
+        if (null === $this->disabled) {
+            return;
+        }
+
+        if ($this->disabled) {
+            Html::addCssClass($attrs, 'disabled');
+        } else {
+            Html::removeCssClass($attrs, 'disabled');
+        }
+    }
+
     public function isShow()
     {
-        return true;
+        return $this->isShow;
     }
 
     public function __toString()

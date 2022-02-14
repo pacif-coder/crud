@@ -14,6 +14,8 @@ class Cancel extends Link
 
     public $place = 'bottom/right';
 
+    protected static $isUseDefMessageCategory = true;
+
     public function getUrl()
     {
         $view = Yii::$app->getView();

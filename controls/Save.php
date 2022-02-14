@@ -18,4 +18,6 @@ class Save extends Base
     public $options = [
         'type' => 'submit',
     ];
+
+    protected static $isUseDefMessageCategory = true;
 }
