@@ -3,20 +3,18 @@ form {
         color: #989898;
     }
 
-    .required {
-        label.control-label {
-            margin-right: 0;
+    .required label.control-label, label.required {
+        margin-right: 0;
 
-            &::before {
-                content: '*';
-                color: #ff0000;
-                font-size: 13px;
-                line-height: 12px;
-                margin-right: 5px;
-                font-family: monospace;
-                position: relative;
-                top: -5px;
-            }
+        &::before {
+            content: '*';
+            color: #ff0000;
+            font-size: 13px;
+            line-height: 12px;
+            margin-right: 5px;
+            font-family: monospace;
+            position: relative;
+            top: -5px;
         }
     }
 
@@ -37,6 +35,7 @@ form {
 
     .help-block {
         margin: 0;
+        white-space: pre;
     }
 
     .error-summary {
