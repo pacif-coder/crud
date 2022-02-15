@@ -31,7 +31,7 @@ class Toolbar
             if (!$button->isShow()) {
                 continue;
             }
-            
+
             $html = $button->html();
             if ('right' == $button->align) {
                 $right[] = ['html' => $html, 'order' => $button->order];
@@ -107,6 +107,8 @@ class Toolbar
             }
 
             $button['grid'] = $this->grid;
+
+            $button['messageCategory'] = $this->grid->messageCategory;
 
             $this->buttons[] = Yii::createObject($button);
         }

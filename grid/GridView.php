@@ -6,12 +6,14 @@ use yii\grid\GridViewAsset as BaseGridViewAsset;
 use yii\widgets\BaseListView;
 
 use app\modules\crud\grid\column\DataColumn;
+use app\modules\crud\controls\CopyMessageCategoryInterface;
 
 /**
  *
  *
  */
 class GridView extends \yii\grid\GridView
+implements CopyMessageCategoryInterface
 {
     use GridViewTrait;
 
@@ -24,6 +26,8 @@ class GridView extends \yii\grid\GridView
 
     public $addActionColumn = false;
     public $actionColumn = 'yii\grid\ActionColumn';
+
+    public $messageCategory;
 
     protected function initColumns()
     {
@@ -60,6 +64,14 @@ class GridView extends \yii\grid\GridView
         }
 
         parent::initColumns();
+
+        if ($this->messageCategory) {
+            foreach ($this->columns as $i => $column) {
+                if (is_a($column, CopyMessageCategoryInterface::class)) {
+                    $column->messageCategory = $this->messageCategory;
+                }
+            }
+        }
     }
 
     /**
