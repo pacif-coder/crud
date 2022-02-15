@@ -4,8 +4,8 @@ namespace app\modules\crud\builder;
 use Yii;
 use yii\base\InvalidConfigException;
 use yii\base\Model;
-use yii\db\ActiveRecord;
 use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 
@@ -26,6 +26,9 @@ class FormBuilder extends Base
     public $addFieldsAfter = [];
 
     public $fieldHint = [];
+
+    // @XXX implement
+    public $fieldPlaceholder = [];
 
     public $fieldset2fields;
     public $fieldsetLegends = [];
