@@ -63,14 +63,14 @@ implements CopyMessageCategoryInterface
 
     protected static $isUseDefMessageCategory;
 
-    protected static $defMessageCategory;
+    protected $defMessageCategory;
 
     public function init()
     {
         parent::init();
 
-        if (!self::$defMessageCategory) {
-            self::$defMessageCategory = ClassI18N::class2messagesPath('app\modules\crud\controls\Button');
+        if (!$this->defMessageCategory) {
+            $this->defMessageCategory = ClassI18N::class2messagesPath('app\modules\crud\controls\Button');
         }
     }
 
@@ -81,7 +81,7 @@ implements CopyMessageCategoryInterface
             $content .= Html::icon($this->icon) . ' ';
         }
 
-        $category = static::$isUseDefMessageCategory? static::$defMessageCategory : $this->messageCategory;
+        $category = static::$isUseDefMessageCategory? $this->defMessageCategory : $this->messageCategory;
         $label = Yii::t($category, $this->getLabel());
 
         $content .= $label;

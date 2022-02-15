@@ -22,7 +22,7 @@ class Delete extends SendFormButton
     // disabled by default
     public $disabled = true;
 
-    protected static $defMessageCategory = 'yii';
+    protected $defMessageCategory = 'yii';
 
     protected static $isUseDefMessageCategory = true;
 
@@ -35,7 +35,7 @@ class Delete extends SendFormButton
         if (null !== $this->confirmMessage) {
             $message = Yii::t($this->messageCategory, $this->confirmMessage);
         } else {
-            $message = Yii::t(static::$defMessageCategory, static::$defConfirmMessage);
+            $message = Yii::t($this->defMessageCategory, static::$defConfirmMessage);
         }
 
         $attrs['data-confirm-message'] = $message;

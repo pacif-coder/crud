@@ -15,8 +15,8 @@ class Button extends \app\modules\crud\controls\Base
 
     public function init()
     {
-        if (!self::$defMessageCategory) {
-            self::$defMessageCategory = ClassI18N::class2messagesPath('app\modules\crud\grid\toolbar\Button');
+        if (!$this->defMessageCategory) {
+            $this->defMessageCategory = ClassI18N::class2messagesPath(self::class);
         }
 
         parent::init();

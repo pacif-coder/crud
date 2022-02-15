@@ -16,6 +16,8 @@ class ClearFilter extends Link
 
     public $order = -1;
 
+    protected static $isUseDefMessageCategory = true;
+
     public function getUrl()
     {
         // drop all form filter params
