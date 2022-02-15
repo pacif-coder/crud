@@ -4,6 +4,7 @@ namespace app\modules\crud\builder;
 use Yii;
 use yii\base\Event;
 use yii\data\ActiveDataProvider;
+use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 use yii\validators\ExistValidator;
 
@@ -33,7 +34,8 @@ class GridBuilder extends Base
     public $addColumnsAfter = [];
     public $addColumnBefore = [];
     public $addColumnsBefore = [];
-    public $columnFormats;
+    public $columnFormats = [];
+    public $columnLabels = [];
     public $columnOptions = [];
 
     public $defaultOrder;
@@ -71,6 +73,8 @@ class GridBuilder extends Base
 
     public $autoJoin = true;
 
+    public $joinWith = [];
+
     /**
      * @event Grid types
      */
@@ -102,10 +106,21 @@ class GridBuilder extends Base
     protected $_transformFilterAttrMap = [];
     protected $_isChangeGridOption = false;
 
+    protected $_joinWithModels = [];
+
     protected $_extraControlVar = 'grid';
     protected $_extraControlDefPlace = 'title';
 
     protected static $_autoJoinI = 1;
+
+    public function controller2this($controller, $prefix = 'fb_')
+    {
+        if (isset($controller->parentModelID)) {
+            $this->parentModelID = $controller->parentModelID;
+        }
+
+        parent::controller2this($controller, $prefix);
+    }
 
     public function build($modelClass = null)
     {
@@ -140,31 +155,30 @@ class GridBuilder extends Base
         }
 
         $this->insertColumns();
+        $this->joinWith();
 
         foreach ($this->columns as $column => $desc) {
-            if (!isset($this->columnOptions[$column])) {
-                continue;
+            // other options
+            if (isset($this->columnOptions[$column])) {
+                $desc = ArrayHelper::merge($desc, $this->columnOptions[$column]);
             }
 
-            $desc = ArrayHelper::merge($desc, $this->columnOptions[$column]);
-            $this->columns[$column] = $desc;
-        }
-
-        // define column format
-        foreach ($this->columns as $column => $desc) {
-            if (isset($desc['format'])) {
-                continue;
+            // set label
+            if (isset($this->columnLabels[$column])) {
+                $desc['label'] = $this->columnLabels[$column];
             }
 
             $attr = isset($desc['attribute'])? $desc['attribute'] : null;
-            if (null === $attr) {
-                continue;
+
+            // define column format
+            if (null !== $attr && !isset($desc['format'])) {
+                $format = $this->getColumnFormat($attr, $this->modelClass);
+                if (null !== $format) {
+                    $desc['format'] = $format;
+                }
             }
 
-            $format = $this->getColumnFormat($attr, $this->modelClass);
-            if (null !== $format) {
-                $this->columns[$column]['format'] = $format;
-            }
+            $this->columns[$column] = $desc;
         }
 
         if ($this->dragable) {
@@ -218,7 +232,7 @@ class GridBuilder extends Base
             }
         }
 
-        if ($this->gridWithEditLink && $this->nameAttr) {
+        if ($this->gridWithEditLink) {
             $this->makeGridEditLink();
         }
 
@@ -343,7 +357,24 @@ class GridBuilder extends Base
             $options['pagination']['pageSize'] = $this->pageSize;
         }
 
-        return $this->provider = new ActiveDataProvider($options);
+        $this->provider = new ActiveDataProvider($options);
+        $sort = $this->provider->getSort();
+        if (!$sort) {
+            return $this->provider;
+        }
+
+        foreach ($this->joinWith as $name => $columns) {
+            foreach ((array) $columns as $column) {
+                $attr = "{$name}.{$column}";
+                if (isset($sort->attributes[$attr])) {
+                    continue;
+                }
+
+                $sort->attributes[$attr] = ['label' => $attr];
+            }
+        }
+
+        return $this->provider;
     }
 
     protected function fixSort()
@@ -387,6 +418,10 @@ class GridBuilder extends Base
         $this->gridOptions['surroundFormAction'] = $this->surroundFormAction;
         $this->gridOptions['surroundFormMethod'] = $this->surroundFormMethod;
         $this->gridOptions['surroundFormOptions'] = $this->surroundFormOptions;
+
+        if ($this->messageCategory) {
+            $this->gridOptions['messageCategory'] = $this->messageCategory;
+        }
 
         $this->gridOptions['dragable'] = $this->dragable;
 
@@ -449,8 +484,8 @@ class GridBuilder extends Base
                 continue;
             }
 
-            $this->_createTmpModel();
-            $this->initValidators($this->_model);
+            $model = $this->_createTmpModel();
+            $this->initValidators($model);
 
             if (!isset($this->validatorts[$attr])) {
                 continue;
@@ -482,8 +517,8 @@ class GridBuilder extends Base
                 continue;
             }
 
-            $this->_createTmpModel();
-            $this->initValidators($this->_model);
+            $model = $this->_createTmpModel();
+            $this->initValidators($model);
 
             if (!isset($this->validatorts[$attr])) {
                 continue;
@@ -536,15 +571,84 @@ class GridBuilder extends Base
         }
     }
 
+    protected function joinWith()
+    {
+        if (!$this->joinWith) {
+            return;
+        }
+
+        /* @var $query \yii\db\ActiveQuery */
+        $query = $this->getQuery();
+
+        $schema = Yii::$app->db->schema;
+
+        $model = $this->_createTmpModel();
+        foreach ($this->joinWith as $name => $columns) {
+            $query->joinWith($name, false, 'left join');
+
+            $method = "get{$name}";
+            $object = $model->{$method}();
+            $table = $object->modelClass::tableName();
+
+            $model = $object->modelClass::instance();
+            $this->_joinWithModels[$name] = $model;
+
+            foreach ((array) $columns as $column) {
+                $attr = "{$name}.{$column}";
+                $this->columns[$attr] = [
+                    'attribute' => $attr,
+                    'label' => $model->getAttributeLabel($column),
+                ];
+
+                $as = $schema->quoteSimpleColumnName($attr);
+                $query->addSelect("[[{$table}]].[[{$column}]] as {$as}");
+
+                $this->_transformSortAttrMap[$attr] = "[[{$table}]].[[{$column}]]";
+            }
+
+            $allOptions = $this->_getJoinedOptions($object->modelClass, $columns);
+
+            foreach ($allOptions as $param => $map) {
+                foreach ($map as $column => $value) {
+                    $attr = "{$name}.{$column}";
+                    $this->{$param}[$attr] = $value;
+                }
+            }
+        }
+    }
+
+    protected function _getJoinedOptions($class, $columns)
+    {
+        $all = $this->_filterStatic($class);
+
+        $result = [];
+        foreach (['columnFormats', 'columnLabels', 'columnOptions'] as $param) {
+            if (!isset($all[$param])) {
+                continue;
+            }
+
+            $value = $all[$param];
+            foreach ((array) $columns as $column) {
+                if (!isset($value[$column])) {
+                    continue;
+                }
+
+                $result[$param][$column] = $value[$column];
+            }
+        }
+
+        return $result;
+    }
+
     protected function getColumnFormat($attr)
     {
         if (isset($this->columnFormats[$attr])) {
             return $this->columnFormats[$attr];
         }
 
-        $this->_createTmpModel();
+        $model = $this->_createTmpModel();
 
-        $format = $this->getControlTypeByValidator($this->_model, $attr);
+        $format = $this->getControlTypeByValidator($model, $attr);
         switch ($format) {
             case 'email':
             case 'boolean':
@@ -575,7 +679,7 @@ class GridBuilder extends Base
 
         // enum value in column
         if (isset($this->enumOptions[$attr])) {
-            $this->initEnumOptionsByDesc($this->_model, $attr);
+            $this->initEnumOptionsByDesc($model, $attr);
             $options = $this->enumOptions[$attr];
             $emptyLabel = $this->emptyEnumOptionLabel;
 
@@ -591,13 +695,25 @@ class GridBuilder extends Base
     protected function makeGridEditLink()
     {
         $targetColumn = null;
+        $nameAttr = $this->nameAttr;
+        if (null === $this->nameAttr) {
+            $keys = $this->modelClass::primaryKey();
+            if (1 == count($keys)) {
+                $nameAttr = current($keys);
+            }
+        }
+
+        if (null === $nameAttr) {
+            return;
+        }
+
         foreach ($this->columns as $column => $desc) {
             $attr = isset($desc['attribute'])? $desc['attribute'] : null;
             if (null === $attr) {
                 continue;
             }
 
-            if ($this->nameAttr == $attr) {
+            if ($nameAttr == $attr) {
                 $targetColumn = $column;
                 break;
             }
@@ -619,10 +735,17 @@ class GridBuilder extends Base
     protected function _createTmpModel()
     {
         if ($this->_model) {
-            return;
+            return $this->_model;
         }
 
         $this->_model = $this->modelClass::instantiate(null);
+
+        $parentModelAttr = ParentModel::getParentModelAttr($this->modelClass);
+        if ($parentModelAttr) {
+            $this->_model->{$parentModelAttr} = $this->parentModelID;
+        }
+
+        return $this->_model;
     }
 
     protected function getDefaultColumns($modelClass)
