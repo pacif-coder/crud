@@ -13,15 +13,17 @@ class Button extends \app\modules\crud\controls\Base
 
     public $sizeClass = 'btn-xs';
 
-    public function init() {
-        if (!$this->messageCategory) {
-            $this->messageCategory = ClassI18N::class2messagesPath('app\modules\crud\grid\toolbar\Button');
+    public function init()
+    {
+        if (!self::$defMessageCategory) {
+            self::$defMessageCategory = ClassI18N::class2messagesPath('app\modules\crud\grid\toolbar\Button');
         }
 
         parent::init();
     }
 
-    public function getAttrs() {
+    public function getAttrs()
+    {
         $attrs = parent::getAttrs();
 
         if ($this->grid) {
@@ -29,5 +31,16 @@ class Button extends \app\modules\crud\controls\Base
         }
 
         return $attrs;
+    }
+
+    public function columnData2this($model, $key, $index)
+    {
+        foreach (get_object_vars($this) as $param => $value) {
+            if (is_string($value) || !is_callable($value)) {
+                continue;
+            }
+
+            $this->{$param} = call_user_func($value, $model, $key, $index);
+        }
     }
 }
