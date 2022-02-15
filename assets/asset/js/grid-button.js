@@ -10,7 +10,9 @@ $(document).ready(function () {
 
             function onSelectionCnange () {
                 var count = $(checkboxSelect + ':checked', grid).length + 0;
-                button.prop('disabled', count == 0);
+
+                var isDis = count == 0;
+                button.prop('disabled', isDis).toggleClass('disabled', isDis);
             }
 
             $(checkboxSelect, grid).click(onSelectionCnange);
