@@ -42,6 +42,6 @@ class SendFormButton extends Button implements NeedCheckboxColumnInterface
 
     public function isShow()
     {
-        return $this->grid->dataProvider->getTotalCount() > 0;
+        return parent::isShow() && $this->grid->dataProvider->getTotalCount() > 0;
     }
 }
