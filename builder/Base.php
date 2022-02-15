@@ -3,11 +3,11 @@ namespace app\modules\crud\builder;
 
 use Yii;
 use yii\base\Event;
+use yii\db\ActiveQueryInterface;
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
 use yii\validators\EmailValidator;
-use yii\db\ActiveQueryInterface;
 
 use yii\bootstrap\Html;
 
@@ -121,6 +121,7 @@ class Base extends \yii\base\Component
 
     protected $_isExtraControlCreated = false;
     protected $_extraControlVar;
+    protected $_extraControlDefPlace;
     protected $_extraControlsByPlace;
 
     protected $_enumActiveQueries = [];
@@ -133,7 +134,7 @@ class Base extends \yii\base\Component
             $this->setModelClass($controller->modelClass, $prefix);
         }
 
-        $this->object2this($controller);
+        $this->static2this($controller, $prefix);
     }
 
     public function setModelClass($modelClass, $prefix = 'fb_')
@@ -146,47 +147,59 @@ class Base extends \yii\base\Component
         }
     }
 
-    public function static2this($class, $prefix = 'fb_')
+    protected function _filterStatic($class, $prefix = 'fb_')
     {
         $ref = new ReflectionClass($class);
-        $this->array2this($ref->getStaticProperties(), $prefix);
+        return $this->_filterByPrefix($ref->getStaticProperties(), $prefix);
+    }
+
+    public function static2this($class, $prefix = 'fb_')
+    {
+        $array = $this->_filterStatic($class);
+        $this->array2this($array);
     }
 
     public function object2this($object, $prefix = null)
     {
-        $this->array2this(get_object_vars($object), $prefix);
+        $array = $this->_filterByPrefix(get_object_vars($object), $prefix);
+        $this->array2this($array);
     }
 
-    protected function array2this($array, $prefix = null)
+    protected function array2this($array)
     {
-        if (null !== $prefix) {
-            $source = [];
-            $len = strlen($prefix);
-            foreach ($array as $param => $value) {
-                if (strlen($param) > $len && $prefix == substr($param, 0, $len)) {
-                    $source[substr($param, $len)] = $value;
-                }
-            }
-        } else {
-            $source = $array;
-        }
-
-        if (!$source) {
+        if (!$array) {
             return;
         }
 
         $thisVars = array_keys(get_object_vars($this));
-        foreach (array_intersect(array_keys($source), $thisVars) as $param) {
-            if (is_array($this->{$param}) && null === $source[$param]) {
-                $source[$param] = [];
+        foreach (array_intersect(array_keys($array), $thisVars) as $param) {
+            if (is_array($this->{$param}) && null === $array[$param]) {
+                $array[$param] = [];
             }
 
             if (in_array($param, $this->mergeAsArray)) {
-                $this->{$param} = array_merge($this->{$param}, $source[$param]);
+                $this->{$param} = array_merge($this->{$param}, $array[$param]);
             } else {
-                $this->{$param} = $source[$param];
+                $this->{$param} = $array[$param];
             }
         }
+    }
+
+    protected function _filterByPrefix($array, $prefix = null)
+    {
+        if (null === $prefix) {
+            return $array;
+        }
+
+        $source = [];
+        $len = strlen($prefix);
+        foreach ($array as $param => $value) {
+            if (strlen($param) > $len && $prefix == substr($param, 0, $len)) {
+                $source[substr($param, $len)] = $value;
+            }
+        }
+
+        return $source;
     }
 
     protected function initNameAttr()
@@ -401,8 +414,8 @@ class Base extends \yii\base\Component
                 $control['messageCategory'] = $this->messageCategory;
             }
 
-            if (!is_int($place) && (!isset($control['place']) || !$control['place'])) {
-                $control['place'] = $place;
+            if ((!isset($control['place']) || !$control['place'])) {
+                $control['place'] = $this->_extraControlDefPlace;
             }
 
             if (!isset($control['name']) && isset($control['action'])) {
