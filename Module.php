@@ -13,7 +13,8 @@ class Module extends \yii\base\Module
     /**
      *
      */
-    public function init() {
+    public function init()
+    {
         parent::init();
 
         $this->registerTranslations();
