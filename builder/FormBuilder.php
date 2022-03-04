@@ -30,6 +30,8 @@ class FormBuilder extends Base
     // @XXX implement
     public $fieldPlaceholder = [];
 
+    public $extraProcessedFields = [];
+
     public $fieldset2fields;
     public $fieldsetLegends = [];
     public $fieldsetAttrs = [];
@@ -174,6 +176,7 @@ class FormBuilder extends Base
                 $skipDataFields[] = $field;
             }
         }
+        $skipDataFields = array_diff($skipDataFields, $this->extraProcessedFields);
 
         $formName = $model->formName();
         if ($skipDataFields && isset($data[$formName])) {
