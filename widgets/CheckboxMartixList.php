@@ -119,6 +119,10 @@ class CheckboxMartixList extends InputWidget
                     'label' => $this->encode ? Html::encode($label) : $label,
                 ]);
 
+                if ($this->isTruncate) {
+                    $options['labelOptions']['title'] = $label;
+                }
+
                 $elements[] = Html::checkbox($name, $checked || $this->forceChecked, $options);
             }
             $index++;
