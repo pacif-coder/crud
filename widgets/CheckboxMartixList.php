@@ -6,13 +6,14 @@ use yii\widgets\InputWidget;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 
-use app\modules\crud\widgets\assets\CheckboxMartixList as Asset;
+use app\modules\crud\widgets\assets\CheckboxMartixAsset as Asset;
 
 /**
  * fdsfs
  *
  */
-class CheckboxMartixList extends InputWidget {
+class CheckboxMartixList extends InputWidget
+{
     public $items;
 
     public $tag = 'div';
@@ -29,6 +30,12 @@ class CheckboxMartixList extends InputWidget {
 
     public $disabled;
 
+    public $forceChecked;
+
+    public $isTruncate = true;
+
+    public $noBorder = true;
+
     public function init()
     {
         parent::init();
@@ -42,6 +49,11 @@ class CheckboxMartixList extends InputWidget {
     {
         Html::addCssClass($this->options, 'checkbox-martix-list');
         $this->options['data-role'] = 'checkbox-martix-list';
+
+        if ($this->noBorder) {
+            Html::addCssClass($this->options, 'no-border');
+        }
+
         Asset::register($this->getView());
 
         $checkboxList = $this->items2checkboxList($this->items);
@@ -87,6 +99,10 @@ class CheckboxMartixList extends InputWidget {
             $itemOptions['disabled'] = 'disabled';
         }
 
+        if ($this->isTruncate) {
+            $itemOptions['labelOptions']['class'] = 'truncate';
+        }
+
         $elements = [];
         $index = 0;
         $name = $this->getName();
@@ -98,10 +114,12 @@ class CheckboxMartixList extends InputWidget {
             if ($formatter !== null) {
                 $elements[] = call_user_func($formatter, $index, $label, $name, $checked, $value);
             } else {
-                $elements[] = Html::checkbox($name, $checked, array_merge($itemOptions, [
-                        'value' => $value,
-                        'label' => $this->encode ? Html::encode($label) : $label,
-                ]));
+                $options = array_merge($itemOptions, [
+                    'value' => $value,
+                    'label' => $this->encode ? Html::encode($label) : $label,
+                ]);
+
+                $elements[] = Html::checkbox($name, $checked || $this->forceChecked, $options);
             }
             $index++;
         }

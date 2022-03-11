@@ -1,0 +1,14 @@
+.hier-checkbox-martix-list, .checkbox-martix-list { height: auto !important; padding: 0; }
+.hier-checkbox-martix-list.no-border, .checkbox-martix-list.no-border { border: none 0px; box-shadow: none; -webkit-box-shadow: none; }
+.hier-checkbox-martix-list label, .checkbox-martix-list label { font-weight: normal; cursor: pointer; margin-bottom: 0; }
+.hier-checkbox-martix-list label.truncate, .checkbox-martix-list label.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hier-checkbox-martix-list .row, .checkbox-martix-list .row { margin-right: 0; margin-left: 0; }
+.hier-checkbox-martix-list .row div, .checkbox-martix-list .row div { padding-right: 5px; padding-left: 5px; margin-right: 0; margin-left: 0; }
+.hier-checkbox-martix-list .row div:hover, .checkbox-martix-list .row div:hover { background: #ddd; }
+.hier-checkbox-martix-list .row div label, .checkbox-martix-list .row div label { margin-bottom: 0; }
+.hier-checkbox-martix-list .row div label input, .checkbox-martix-list .row div label input { position: relative; top: 2px; }
+
+.hier-checkbox-martix-list > div { padding-bottom: 5px; }
+.hier-checkbox-martix-list > div:last-child { padding-bottom: 0; }
+.hier-checkbox-martix-list label.header { padding-left: 5px; cursor: pointer; background: #ccc; display: block; }
+.hier-checkbox-martix-list label.header input { margin-right: 5px; position: relative; top: 2px; }

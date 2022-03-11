@@ -4,15 +4,14 @@ namespace app\modules\crud\widgets\assets;
 /**
  *
  */
-class CheckboxMartixList extends \yii\web\AssetBundle {
-    public $sourcePath = __DIR__ . '/checkbox-martix-list';
-
+class CheckboxMartixAsset extends \app\modules\crud\assets\BaseAsset
+{
     public $css = [
-        'css/style.css',
+        'css/checkbox-martix-list.css',
     ];
 
     public $js = [
-        'js/script.js',
+        'js/checkbox-martix-list.js',
     ];
 
     public $depends = [

@@ -1,11 +1,23 @@
 .hier-checkbox-martix-list, .checkbox-martix-list {
     height: auto !important;
     padding: 0;
+    
+    &.no-border {
+        border: none 0px;
+        box-shadow: none;
+        -webkit-box-shadow: none;
+    }
 
     label {
         font-weight: normal;
         cursor: pointer;
         margin-bottom: 0;
+        
+        &.truncate {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;            
+        }
     }
 
     .row {
@@ -24,7 +36,6 @@
             }
 
             label {
-                padding-bottom: 2px;
                 margin-bottom: 0;
 
                 input {
