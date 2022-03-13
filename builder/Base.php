@@ -3,19 +3,19 @@ namespace app\modules\crud\builder;
 
 use Yii;
 use yii\base\Event;
+use yii\bootstrap\Html;
 use yii\db\ActiveQueryInterface;
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
 use yii\validators\EmailValidator;
 
-use yii\bootstrap\Html;
-
 use app\modules\crud\controls\CopyMessageCategoryInterface;
-use app\modules\crud\widgets\MaskedInput;
 use app\modules\crud\widgets\FileInput;
-use app\modules\crud\helpers\ModelName;
+use app\modules\crud\widgets\MaskedInput;
+use app\modules\crud\helpers\Enum;
 use app\modules\crud\helpers\ClassI18N;
+use app\modules\crud\helpers\ModelName;
 
 use ReflectionClass;
 
@@ -31,6 +31,7 @@ class Base extends \yii\base\Component
     public $fieldTypes;
     public $type2fields;
     public $fieldOptions;
+    public $fieldLabels;
     public $fieldAddClass = [];
 
     public $readyOnlyFields = [];
@@ -71,8 +72,6 @@ class Base extends \yii\base\Component
     public $emptyEnumOptionLabel = '---';
 
     public $messageCategory;
-
-    public $fieldPrefix;
 
     public $nameAttr = null;
 
@@ -123,8 +122,6 @@ class Base extends \yii\base\Component
     protected $_extraControlVar;
     protected $_extraControlDefPlace;
     protected $_extraControlsByPlace;
-
-    protected $_enumActiveQueries = [];
 
     protected $_builded;
 
@@ -257,20 +254,13 @@ class Base extends \yii\base\Component
         }
 
         /* @var $model ActiveRecord */
-        $method = "get{$attr}";
-        if ($model->hasMethod($method)) {
-            $query = $model->{$method}();
-            if ($query instanceof ActiveQueryInterface) {
-                $query->via = null;
-                $query->primaryModel = null;
-
-                $this->_enumActiveQueries[$attr] = $query;
-                if (!in_array($attr, $this->enumFields)) {
-                    $this->enumFields[] = $attr;
-                }
-
-                return $this->innerType[$attr] = $query->multiple ? 'oneToMany' : 'oneToOne';
+        if (Enum::isEnum($model, $attr)) {
+            if (!in_array($attr, $this->enumFields)) {
+                $this->enumFields[] = $attr;
             }
+
+            $isMultiple = Enum::isMultiple($model, $attr);
+            $this->innerType[$attr] = $isMultiple? 'oneToMany' : 'oneToOne';
         }
 
         if (!isset($this->innerType[$attr])) {
@@ -580,21 +570,17 @@ class Base extends \yii\base\Component
             $control->hint($this->fieldHint[$field]);
         }
 
+        if (isset($this->fieldLabels[$field])) {
+            $control->label($this->fieldLabels[$field]);
+        }
+
         $widget = isset($this->fieldType2widget[$type]) ? $this->fieldType2widget[$type] : null;
         if ($widget) {
-            if ($this->fieldPrefix) {
-                $options['options']['name'] = "{$this->fieldPrefix}[{$field}]";
-            }
-
             if ($isEnum) {
                 $options['items'] = $items;
             }
 
             return (string) $control->widget($widget, $options);
-        }
-
-        if ($this->fieldPrefix) {
-            $options['name'] = "{$this->fieldPrefix}[{$field}]";
         }
 
         $innerMethod = "_{$type}2string";
