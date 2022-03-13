@@ -7,7 +7,6 @@ namespace app\modules\crud\helpers;
  */
 class PhpHelper
 {
-
     public static function data2code($array, $oneLine = true, $intend = '')
     {
         if (!is_array($array) && !is_object($array)) {
@@ -60,5 +59,4 @@ class PhpHelper
     {
         return str_repeat(' ', $count * 4);
     }
-
 }
