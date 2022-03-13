@@ -3,9 +3,12 @@ namespace app\modules\crud\controllers;
 
 use Yii;
 use yii\base\Theme;
+use yii\di\Instance;
 use yii\helpers\Url;
 use yii\web\BadRequestHttpException;
 use yii\web\NotFoundHttpException;
+use yii\web\Request;
+use yii\web\Response;
 
 use app\modules\crud\Module as CrudModule;
 use app\modules\crud\assets\CrudAsset;
@@ -24,6 +27,16 @@ abstract class BaseController extends \yii\web\Controller
     public $assets = [];
 
     public $defaultAsset = CrudAsset::class;
+
+    /**
+     * @var Request|array|string The request.
+     */
+    public $request = 'request';
+
+    /**
+     * @var Response|array|string The response.
+     */
+    public $response = 'response';
 
     /**
      * @var GridBuilder
@@ -57,6 +70,9 @@ abstract class BaseController extends \yii\web\Controller
     public function init()
     {
         parent::init();
+
+        $this->request = Instance::ensure($this->request, Request::class);
+        $this->response = Instance::ensure($this->response, Response::class);
 
         $view = $this->getView();
 
