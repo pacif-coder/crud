@@ -10,6 +10,7 @@ use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 
 use app\modules\crud\builder\Base;
+use app\modules\crud\helpers\Enum;
 use app\modules\crud\helpers\ModelName;
 use app\modules\crud\widgets\ActiveForm;
 
@@ -62,8 +63,6 @@ class FormBuilder extends Base
     public function build(Model $model)
     {
         $this->_checkBuilded();
-
-        $this->_enumActiveQueries = [];
 
         $modelClass = get_class($model);
         if ($modelClass != $this->modelClass) {
@@ -198,22 +197,8 @@ class FormBuilder extends Base
 
         if (isset($this->enumOptions[$attr])) {
             $this->initEnumOptionsByDesc($model, $attr);
-        } elseif (isset($this->_enumActiveQueries[$attr])) {
-            /*@var $query ActiveQuery */
-            $query = $this->_enumActiveQueries[$attr];
-            $class = $query->modelClass;
-
-            $keys = $class::primaryKey();
-            if (count($keys) > 1) {
-                throw new Exception('Not support');
-            }
-
-            $nameAttr = ModelName::getNameAttr($class);
-            if (!$nameAttr) {
-                throw new Exception("Model '{$class}' mast have 'name' attr");
-            }
-
-            $this->enumOptions[$attr] = ArrayHelper::map($query->asArray()->all(), current($keys), $nameAttr);
+        } elseif (Enum::isEnum($model, $attr)) {
+            $this->enumOptions[$attr] = Enum::getList($model, $attr);
         } else {
             $this->initEnumOptionsByValidator($model, $attr);
         }
