@@ -449,7 +449,7 @@ class GridBuilder extends Base
 
         $modelClass = $this->modelClass;
         $table = $modelClass::tableName();
-        $this->query = $modelClass::find()->asArray(true);
+        $this->query = $modelClass::find();
 
         $parentModelAttr = ParentModel::getParentModelAttr($modelClass);
         if ($parentModelAttr) {
