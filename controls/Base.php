@@ -59,11 +59,17 @@ implements CopyMessageCategoryInterface
 
     public $options = [];
 
+    protected $id;
+
     protected static $isAddAction;
 
     protected static $isUseDefMessageCategory;
 
     protected $defMessageCategory;
+
+    protected static $autoIdPrefix = 'fb-';
+
+    protected static $counter = 0;
 
     public function init()
     {
@@ -77,16 +83,31 @@ implements CopyMessageCategoryInterface
     public function getContent()
     {
         $content = '';
-        if ($this->icon) {
-            $content .= Html::icon($this->icon) . ' ';
+
+        $icon = $this->getIcon();
+        if ($icon) {
+            $content .= $icon . ' ';
         }
 
-        $category = static::$isUseDefMessageCategory? $this->defMessageCategory : $this->messageCategory;
-        $label = Yii::t($category, $this->getLabel());
-
-        $content .= $label;
+        $content .= $this->getTransLabel();
 
         return $content;
+    }
+
+    public function getTransLabel()
+    {
+        return $this->t($this->getLabel());
+    }
+
+    public function t($str)
+    {
+        $category = static::$isUseDefMessageCategory? $this->defMessageCategory : $this->messageCategory;
+        return Yii::t($category, $str);
+    }
+
+    public function getIcon()
+    {
+        return $this->icon? Html::icon($this->icon) : '';
     }
 
     public function getLabel()
@@ -139,7 +160,7 @@ implements CopyMessageCategoryInterface
         Html::addCssClass($attrs, $this->colorClass);
         Html::addCssClass($attrs, $this->sizeClass);
 
-        $attrs['id'] = $this->getName();
+        $attrs['id'] = $this->getId();
 
         $this->addActionAttr($attrs);
         $this->addDisabledAttr($attrs);
@@ -165,14 +186,14 @@ implements CopyMessageCategoryInterface
 
         $get = Yii::$app->request->get();
 
+        foreach ((array) $this->params as $param => $value) {
+            $get[$param] = $value;
+        }
+
         foreach ((array) $this->removeParams as $removeParam) {
             if (isset($get[$removeParam])) {
                 unset($get[$removeParam]);
             }
-        }
-
-        foreach ((array) $this->params as $param => $value) {
-            $get[$param] = $value;
         }
 
         $controller = $this->getController();
@@ -216,6 +237,24 @@ implements CopyMessageCategoryInterface
     public function isShow()
     {
         return $this->isShow;
+    }
+
+    public function getId($autoGenerate = true)
+    {
+        if ($autoGenerate && $this->id === null) {
+            $this->id = static::$autoIdPrefix . static::$counter++;
+        }
+
+        return $this->id;
+    }
+
+    /**
+     * Sets the ID of the widget.
+     * @param string $value id of the widget.
+     */
+    public function setId($value)
+    {
+        $this->_id = $value;
     }
 
     public function __toString()
