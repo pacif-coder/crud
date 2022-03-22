@@ -38,6 +38,8 @@ class GridBuilder extends Base
     public $columnLabels = [];
     public $columnOptions = [];
 
+    public $editColumnClass = ActionLinkColumn::class;
+
     public $defaultOrder;
     public $pageSize;
     public $gridWithEditLink = true;
@@ -192,9 +194,12 @@ class GridBuilder extends Base
                 $this->columns[$column] = $desc;
             }
 
-            $sortAttr = $this->modelClass::ORDER_ATTR;
-            if ($sortAttr && isset($this->columns[$sortAttr])) {
-                unset($this->columns[$sortAttr]);
+            // remove sort attr column
+            if (is_a($this->modelClass, ModelWithOrderInterface::class, true)) {
+                $sortAttr = $this->modelClass::ORDER_ATTR;
+                if ($sortAttr && isset($this->columns[$sortAttr])) {
+                    unset($this->columns[$sortAttr]);
+                }
             }
 
             if ($this->addDragIconColumn) {
@@ -728,7 +733,7 @@ class GridBuilder extends Base
             return;
         }
 
-        $desc['class'] = ActionLinkColumn::class;
+        $desc['class'] = $this->editColumnClass;
         $this->columns[$targetColumn] = $desc;
     }
 
