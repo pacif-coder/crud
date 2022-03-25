@@ -4,10 +4,12 @@ namespace app\modules\crud\widgets;
 use Yii;
 use yii\helpers\Html;
 
-use app\modules\crud\widgets\assets\CheckboxMartixList as Asset;
+use app\modules\crud\widgets\assets\CheckboxMartixAsset as Asset;
 
 /**
- * fdsfs
+ * Displays the checkbox blocks with the header.
+ * It is possible to disable and enable all checkboxes
+ * in the block using the checkbox in the header 
  */
 class HierCheckboxMartixList extends CheckboxMartixList {
     public function run() {
