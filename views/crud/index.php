@@ -2,6 +2,7 @@
 /* @var $this yii\web\View */
 /* @var $builder app\modules\crud\builder\GridBuilder */
 ?>
+
 <div>
     <?php
         echo $this->render('include/title', compact(['builder']));
