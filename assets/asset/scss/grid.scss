@@ -105,10 +105,6 @@
         &-three {width: 60px;}
     }
 
-    @for $i from 1 through 5 {
-        .column-width-#{$i * 10} {width: #{$i * 10}px;}
-    }
-
     .checkbox-column {
         width: 20px;
     }
@@ -129,6 +125,12 @@
         .btn:not(:last-child) {
             margin-bottom: 5px;
         }
+    }
+}
+
+.grid-view {
+    @for $i from 1 through 40 {
+        .column-width-#{$i * 10} {width: #{$i * 10}px;}
     }
 }
 
