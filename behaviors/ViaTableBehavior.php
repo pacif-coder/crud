@@ -8,7 +8,7 @@ use app\modules\crud\behaviors\viaTable\LinkModel;
 use Exception;
 
 /**
- * XXX add ckech on key exist
+ *
  */
 class ViaTableBehavior extends \yii\base\Behavior
 {
@@ -30,17 +30,23 @@ class ViaTableBehavior extends \yii\base\Behavior
 
     protected $querys = [];
 
+    protected $_init;
+
     public function events()
     {
         return [
-            ActiveRecord::EVENT_INIT => 'afterInit',
+            ActiveRecord::EVENT_BEFORE_VALIDATE => 'initDesc',
             ActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
             ActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
         ];
     }
 
-    public function afterInit()
+    public function initDesc()
     {
+        if ($this->_init) {
+            return;
+        }
+
         foreach ((array) $this->attr as $attr) {
             $method = "get{$attr}";
             $queryLink = $this->owner->{$method}();
@@ -65,10 +71,13 @@ class ViaTableBehavior extends \yii\base\Behavior
 
             $this->querys[$attr] = $queryLink;
         }
+
+        $this->_init = true;
     }
 
     public function afterSave()
     {
+        $this->initDesc();
         foreach ((array) $this->attr as $attr) {
             if (!isset($this->new[$attr])) {
                 continue;
@@ -106,9 +115,10 @@ class ViaTableBehavior extends \yii\base\Behavior
 
     public function checkAttr($attr)
     {
-        $query = $this->querys[$attr];
+        // for safe
+        $this->initDesc();
 
-        $id = $this->getModelId($attr);
+        $query = $this->querys[$attr];
         $possibleIds = $query->asArray()->select($this->idAttr[$attr])->column();
         $notPossible = array_diff($this->getNew($attr), $possibleIds);
         if (!$notPossible) {
@@ -133,6 +143,30 @@ class ViaTableBehavior extends \yii\base\Behavior
     public function canSetProperty($name, $checkVars = true): bool
     {
         return in_array($name, (array) $this->attr) || parent::canSetProperty($name, $checkVars);
+    }
+
+    public function hasMethod($name)
+    {
+        foreach ((array) $this->attr as $attr) {
+            $method = "check{$attr}Attr";
+            if (strtolower($name) == strtolower($method)) {
+                return true;
+            }
+        }
+
+        return parent::hasMethod($name);
+    }
+
+    public function __call($name, $params)
+    {
+        foreach ((array) $this->attr as $attr) {
+            $method = "check{$attr}Attr";
+            if (strtolower($name) == strtolower($method)) {
+                return $this->checkAttr($attr);
+            }
+        }
+
+        return parent::__call($name, $params);
     }
 
     public function getExist($attr)
