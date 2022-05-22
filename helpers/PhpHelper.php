@@ -29,20 +29,21 @@ class PhpHelper
             $str = "{$intend}[\n";
         }
 
+        $i = 0;
         foreach ($array as $key => $value) {
             if (!$oneLine) {
                 $str .= $pad;
             }
 
-            if ($withKey) {
+            if ($withKey && $i !== $key) {
                 $str .= var_export($key, true) . ' => ';
-                $str .= ltrim(self::data2code($value, $oneLine, $pad));
-            } else {
-                $str .= self::data2code($value, $oneLine, $pad);
             }
+            $str .= ltrim(self::data2code($value, $oneLine, $pad, 1));
 
             $str .= ',';
             $str .= $oneLine? ' ' : "\n";
+
+            $i += 1;
         }
 
         if ($oneLine) {
