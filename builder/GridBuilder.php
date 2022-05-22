@@ -298,6 +298,8 @@ class GridBuilder extends Base
 
             array_splice($this->columns, $index, 0, $insert);
         }
+
+        $this->columns = $this->parseColumns($this->columns);
     }
 
     protected function filterApply()
