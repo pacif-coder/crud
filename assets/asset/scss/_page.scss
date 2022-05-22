@@ -34,9 +34,13 @@
         margin-top: 0.4em;
         float: right;
         padding-left: 1em;
+
+        .inline-dropdown {
+            display: inline;
+        }
     }
 
-    .btn + .btn {
+    .btn + .btn, .btn + .inline-dropdown, .inline-dropdown + .btn {
         margin-left: 5px;
     }
 }
