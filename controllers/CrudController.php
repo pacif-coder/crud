@@ -51,9 +51,7 @@ abstract class CrudController extends BaseController
 
         $this->createIndexTitle();
 
-        $view = $this->getView();
-        $br = new Breadcrumbs();
-        $view->params['breadcrumbs'] = $br->createIndexBreadcrumbs($this->createModel());
+        $this->createIndexBreadcrumbs();
 
         return $this->render('index', compact(['builder']));
     }
@@ -62,6 +60,13 @@ abstract class CrudController extends BaseController
     {
         $model = $this->createModel();
         $this->title = $this->t('List items', $this->getTitleParams($model));
+    }
+
+    protected function createIndexBreadcrumbs()
+    {
+        $view = $this->getView();
+        $br = new Breadcrumbs();
+        $view->params['breadcrumbs'] = $br->createIndexBreadcrumbs($this->createModel());
     }
 
     /**
