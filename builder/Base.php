@@ -4,7 +4,6 @@ namespace app\modules\crud\builder;
 use Yii;
 use yii\base\Event;
 use yii\bootstrap\Html;
-use yii\db\ActiveQueryInterface;
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
@@ -483,15 +482,28 @@ class Base extends \yii\base\Component
             return '';
         }
 
+        $str = '';
         if (1 == count($tmp)) {
-            return implode('', $this->_extraControlsByPlace[$tmp[0]]);
+            foreach ($this->_extraControlsByPlace[$tmp[0]] as $control) {
+                if ($control->isShow()) {
+                    $str .= (string) $control;
+                }
+            }
+
+            return $str;
         }
 
         if (2 == count($tmp) && !isset($this->_extraControlsByPlace[$tmp[0]][$tmp[1]])) {
             return '';
         }
 
-        return implode('', $this->_extraControlsByPlace[$tmp[0]][$tmp[1]]);
+        foreach ($this->_extraControlsByPlace[$tmp[0]][$tmp[1]] as $control) {
+            if ($control->isShow()) {
+                $str .= (string) $control;
+            }
+        }
+
+        return $str;
     }
 
     /**
@@ -548,7 +560,7 @@ class Base extends \yii\base\Component
         if (in_array($field, $this->readyOnlyFields) && $isEnum &&
                 !array_key_exists('value', $fieldOptions)) {
 
-            $value = $items[$model->{$field}];
+            $value = isset($items[$model->{$field}])? $items[$model->{$field}] : '';
             $fieldOptions['value'] = $value;
             $type = 'staticControl';
         }
