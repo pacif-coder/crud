@@ -46,6 +46,7 @@ class GridBuilder extends Base
     public $gridOptions = [];
     public $dragable;
     public $addDragIconColumn = true;
+    public $removeSortColumn = true;
 
     public $addToolbarButtons = [];
     public $removeToolbarButtons = [];
@@ -195,7 +196,7 @@ class GridBuilder extends Base
             }
 
             // remove sort attr column
-            if (is_a($this->modelClass, ModelWithOrderInterface::class, true)) {
+            if ($this->removeSortColumn && is_a($this->modelClass, ModelWithOrderInterface::class, true)) {
                 $sortAttr = $this->modelClass::ORDER_ATTR;
                 if ($sortAttr && isset($this->columns[$sortAttr])) {
                     unset($this->columns[$sortAttr]);
