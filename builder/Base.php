@@ -4,6 +4,7 @@ namespace app\modules\crud\builder;
 use Yii;
 use yii\base\Event;
 use yii\bootstrap\Html;
+use yii\helpers\ArrayHelper;
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
@@ -16,7 +17,9 @@ use app\modules\crud\helpers\Enum;
 use app\modules\crud\helpers\ClassI18N;
 use app\modules\crud\helpers\ModelName;
 
+use Exception;
 use ReflectionClass;
+use ReflectionProperty;
 
 /**
  * XXX
@@ -167,7 +170,32 @@ class Base extends \yii\base\Component
             return;
         }
 
-        $thisVars = array_keys(get_object_vars($this));
+        $ref = new ReflectionClass($this);
+        $props = $ref->getProperties(ReflectionProperty::IS_PUBLIC);
+        $thisVars = ArrayHelper::getColumn($props, 'name');
+
+        // check
+        if (YII_ENV_DEV) {
+            foreach (array_diff(array_keys($array), $thisVars) as $errorParam) {
+                $matchs = [];
+                foreach ($thisVars as $param) {
+                    $arr1 = array_unique(str_split(strtolower($param)));
+                    $arr2 = array_unique(str_split(strtolower($errorParam)));
+
+                    $matchs[$param] = count(array_intersect($arr1, $arr2));
+                }
+
+                arsort($matchs);
+                if ($matchs) {
+                    $bestScore = current($matchs);
+                    $showCount = max(array_count_values($matchs)[$bestScore], 5);
+                    $showParams = array_keys(array_slice($matchs, 0, $showCount));
+
+                    throw new Exception("Param '{$errorParam}' not exist. Most likely params is '" . implode("', '", $showParams) . "'");
+                }
+            }
+        }
+
         foreach (array_intersect(array_keys($array), $thisVars) as $param) {
             if (is_array($this->{$param}) && null === $array[$param]) {
                 $array[$param] = [];
