@@ -175,7 +175,7 @@ class Base extends \yii\base\Component
         $thisVars = ArrayHelper::getColumn($props, 'name');
 
         // check
-        if (YII_ENV_DEV) {
+        if (YII_ENV_DEV && false) {
             foreach (array_diff(array_keys($array), $thisVars) as $errorParam) {
                 $matchs = [];
                 foreach ($thisVars as $param) {
