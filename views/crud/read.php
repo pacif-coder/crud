@@ -1,9 +1,8 @@
 <?php
 /* @var $this yii\web\View */
-/* @var $form yii\bootstrap\ActiveForm */
+/* @var $form yii\widgets\ActiveForm */
 /* @var $builder app\modules\crud\builder\FormBuilder */
 
-// use Yii;
 use yii\widgets\DetailView;
 ?>
 <div>
