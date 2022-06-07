@@ -1,5 +1,5 @@
 <?php
-use yii\bootstrap\Html;
+use yii\helpers\Html;
 ?>
 <h1>
     <?php
