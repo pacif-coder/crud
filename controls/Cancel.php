@@ -2,7 +2,6 @@
 namespace app\modules\crud\controls;
 
 use Yii;
-use yii\bootstrap\Html;
 
 /**
  * @XXX
