@@ -113,14 +113,6 @@
         color: #ccc;
     }
 
-    .truncate-text {
-        max-width: 200px;
-
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
     .actions {
         .btn:not(:last-child) {
             margin-bottom: 5px;
@@ -131,6 +123,18 @@
 .grid-view {
     @for $i from 1 through 40 {
         .column-width-#{$i * 10} {width: #{$i * 10}px;}
+    }
+
+    .truncate-text {
+        max-width: 200px;
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    @for $i from 1 through 40 {
+        .truncate-text-#{$i * 10} {max-width: #{$i * 10}px;}
     }
 }
 
