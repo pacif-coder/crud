@@ -17,8 +17,6 @@ class Enum
 {
     protected static $activeQueries = [];
 
-    protected static $cash = [];
-
     public static function isEnum($model, $attr)
     {
         $class = get_class($model);
@@ -56,10 +54,13 @@ class Enum
 
         $query->asArray();
 
-        if (is_a($class, ModelWithOrderInterface::class, true)) {
-            $query->orderBy($class::ORDER_ATTR);
-        } else {
-            $query->orderBy($nameAttr);
+        // not exist order 
+        if (!$query->orderBy) {
+            if (is_a($class, ModelWithOrderInterface::class, true)) {
+                $query->orderBy($class::ORDER_ATTR);
+            } else {
+                $query->orderBy($nameAttr);
+            }
         }
 
         return ArrayHelper::map($query->all(), current($keys), $nameAttr);
@@ -91,20 +92,5 @@ class Enum
         $query->primaryModel = null;
 
         return self::$activeQueries[$class][$attr] = $query;
-    }
-
-    public static function cashExists($key)
-    {
-        return isset(self::$cash[$key]);
-    }
-
-    public static function cashGet($key)
-    {
-        return isset(self::$cash[$key])? self::$cash[$key] : false;
-    }
-
-    public static function cashSet($key, $value)
-    {
-        return self::$cash[$key] = $value;
     }
 }
