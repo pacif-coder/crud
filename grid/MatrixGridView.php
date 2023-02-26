@@ -24,9 +24,18 @@ class MatrixGridView extends \ThumbOnDemand\widgets\MatrixGridView
     {
         parent::init();
 
+        if (is_string($this->cell)) {
+            $this->cell = ['class' => $this->cell];
+        } elseif (is_array($this->cell) && !isset($this->cell['class'])) {
+            $this->cell['class'] = Cell::class;
+        }
+
         $this->registerAsset();
     }
 
+    /**
+     * Needed - call not trait registerJs
+     */
     protected function registerJs()
     {
         parent::registerJs();
