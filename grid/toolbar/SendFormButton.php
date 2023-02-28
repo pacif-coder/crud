@@ -4,6 +4,7 @@ namespace app\modules\crud\grid\toolbar;
 use yii\grid\CheckboxColumn;
 use yii\grid\GridView;
 
+use app\modules\crud\grid\MatrixGridView;
 use app\modules\crud\grid\toolbar\Button;
 use app\modules\crud\grid\toolbar\NeedCheckboxColumnInterface;
 
@@ -23,18 +24,19 @@ class SendFormButton extends Button implements NeedCheckboxColumnInterface
 
         $attrs['data-is-inside-form'] = $this->grid->surroundForm || $this->grid->isInsideForm;
 
-        if (!is_a($this->grid, GridView::class)) {
-            return $attrs;
-        }
+        if (is_a($this->grid, GridView::class)) {
+            foreach ($this->grid->columns as $column) {
+                if (!($column instanceof CheckboxColumn)) {
+                    continue;
+                }
 
-        foreach ($this->grid->columns as $column) {
-            if (!($column instanceof CheckboxColumn)) {
-                continue;
+                $attrs['data-checkbox-name'] = $column->name;
+                $attrs['data-checkbox-role'] = $column->checkboxOptions['data-role'];
+                break;
             }
-
-            $attrs['data-checkbox-name'] = $column->name;
-            $attrs['data-checkbox-role'] = $column->checkboxOptions['data-role'];
-            break;
+        } elseif (is_a($this->grid, MatrixGridView::class)) {
+            $attrs['data-checkbox-name'] = $this->grid->cell->name;
+            $attrs['data-checkbox-role'] = $this->grid->cell->checkboxOptions['data-role'];
         }
 
         return $attrs;
