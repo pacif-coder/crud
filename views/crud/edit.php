@@ -5,14 +5,16 @@
 ?>
 <div>
     <?php
-    echo $this->render('include/title', compact(['builder']));
+        echo $this->render('include/loader');
 
-    $formClass = $builder->getFormClass();
-    $form = $formClass::begin($builder->getFormConfig());
+        $formClass = $builder->getFormClass();
+        $form = $formClass::begin($builder->getFormConfig());
 
-    echo $this->render('include/fields', compact(['form', 'builder', 'model']));
+        echo $this->render('include/title', compact(['builder']));
 
-    echo $this->render('include/bottom-buttons', compact(['builder']));
-    $formClass::end();
+        echo $this->render('include/fields', compact(['form', 'builder', 'model']));
+
+        echo $this->render('include/bottom-buttons', compact(['builder']));
+        $formClass::end();
     ?>
 </div>

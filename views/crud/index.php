@@ -5,6 +5,7 @@
 
 <div>
     <?php
+        echo $this->render('include/loader');    
         echo $this->render('include/title', compact(['builder']));
 
         $grid = $builder->gridClass::begin($builder->getOptions());
