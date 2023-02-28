@@ -12,8 +12,6 @@ $(document).ready(function () {
             cancel: 'a',
             cursor: 'move',
             handle: handleExist? handleSelector : false,
-            forcePlaceholderSize: true,
-            forceHelperSize: true,
             placeholder: 'ui-state-highlight',
 
             stop : function(event, ui) {
@@ -44,10 +42,10 @@ $(document).ready(function () {
             {
                 var originals = tr.children();
                 var helper = tr.clone();
+                helper.width(tr.width());
 
                 // Set helper td width to the original width
-                helper.children().each(function (index)
-                {
+                helper.children().each(function (index) {
                     $(this).width(originals.eq(index).width());
                 });
 
