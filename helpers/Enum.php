@@ -1,11 +1,12 @@
 <?php
-namespace app\modules\crud\helpers;
+namespace Crud\helpers;
 
 use yii\db\ActiveQueryInterface;
 use yii\helpers\ArrayHelper;
+use yii\validators\ExistValidator;
 
-use app\modules\crud\helpers\ModelName;
-use app\modules\crud\models\ModelWithOrderInterface;
+use Crud\helpers\ModelName;
+use Crud\models\ModelWithOrderInterface;
 
 use Exception;
 
@@ -17,6 +18,10 @@ class Enum
 {
     protected static $activeQueries = [];
 
+    protected static $cash = [];
+
+    protected static $existValidatorts;
+
     public static function isEnum($model, $attr)
     {
         $class = get_class($model);
@@ -25,20 +30,65 @@ class Enum
         }
 
         $method = "get{$attr}";
-        if (!$model->hasMethod($method)) {
-            return false;
+        if ($model->hasMethod($method)) {
+            $query = $model->{$method}();
+            if ($query instanceof ActiveQueryInterface) {
+                self::$activeQueries[$class][$attr] = $query;
+                return true;
+            }
         }
 
-        $query = $model->{$method}();
-        if (!($query instanceof ActiveQueryInterface)) {
-            return false;
+        self::initValidators($model);
+        if (isset(self::$existValidatorts[$class][$attr])) {
+            return true;
         }
 
-        return true;
+        return false;
+    }
+
+    protected static function initValidators($model)
+    {
+        if (null !== self::$existValidatorts) {
+            return;
+        }
+
+        $class = get_class($model);
+        self::$existValidatorts = [];
+        foreach ($model->getActiveValidators() as $validator) {
+            /*@var $validator \yii\validators\Validator */
+            foreach ($validator->getAttributeNames() as $attr) {
+                if ($validator instanceof ExistValidator) {
+                    self::$existValidatorts[$class][$attr] = $validator;
+                }
+            }
+        }
+
     }
 
     public static function getList($model, $attr)
     {
+        self::initValidators($model);
+
+        $class = get_class($model);
+        if (isset(self::$existValidatorts[$class][$attr])) {
+            /* @var $validator ExistValidator */
+            $validator = self::$existValidatorts[$class][$attr];
+            $targetModelClass = $validator->targetClass;
+            $targetModelAttr = $validator->targetAttribute[$attr];
+
+            $options = [];
+            $nameAttr = ModelName::getNameAttr($targetModelClass);
+            if (!$nameAttr) {
+                throw new Exception("It is not possible to define a name attribute in class '{$targetModelClass}'");
+            }
+
+            foreach ($targetModelClass::find()->orderBy($nameAttr)->all() as $targetModel) {
+                $options[$targetModel->{$targetModelAttr}] = $targetModel->{$nameAttr};
+            }
+
+            return $options;
+        }
+
         $query = self::getQuery($model, $attr);
         $class = $query->modelClass;
 
@@ -54,13 +104,10 @@ class Enum
 
         $query->asArray();
 
-        // not exist order 
-        if (!$query->orderBy) {
-            if (is_a($class, ModelWithOrderInterface::class, true)) {
-                $query->orderBy($class::ORDER_ATTR);
-            } else {
-                $query->orderBy($nameAttr);
-            }
+        if (is_a($class, ModelWithOrderInterface::class, true)) {
+            $query->orderBy($class::ORDER_ATTR);
+        } else {
+            $query->orderBy($nameAttr);
         }
 
         return ArrayHelper::map($query->all(), current($keys), $nameAttr);
@@ -68,6 +115,13 @@ class Enum
 
     public static function isMultiple($model, $attr)
     {
+        self::initValidators($model);
+        $modelClass = get_class($model);
+
+        if (isset(self::$existValidatorts[$modelClass][$attr])) {
+            return false;
+        }
+
         return self::getQuery($model, $attr)->multiple;
     }
 
@@ -92,5 +146,20 @@ class Enum
         $query->primaryModel = null;
 
         return self::$activeQueries[$class][$attr] = $query;
+    }
+
+    public static function cashExists($key)
+    {
+        return isset(self::$cash[$key]);
+    }
+
+    public static function cashGet($key)
+    {
+        return isset(self::$cash[$key])? self::$cash[$key] : false;
+    }
+
+    public static function cashSet($key, $value)
+    {
+        return self::$cash[$key] = $value;
     }
 }
