@@ -3,16 +3,17 @@ $(document).ready(function () {
         var url = $(this).data('dragableUrl');
         var selector = $(this).data('dragableSelector');
         var orderParam = $(this).data('dragableOrderParam');
+        var isGrid = $(this).data('isGrid');
 
-        var handleSelector = '[data-role="drag-icon-column"]';
+        var handleSelector = '[data-role="drag-icon"]';
         var handleExist = $(selector + ' ' + handleSelector, this).length > 0;
 
         $(selector, this).sortable({
-            axis: 'y',
+            axis: isGrid? false : 'y',
             cancel: 'a',
             cursor: 'move',
             handle: handleExist? handleSelector : false,
-            placeholder: 'ui-state-highlight',
+            placeholder: isGrid? false : 'ui-state-highlight',
 
             stop : function(event, ui) {
                 var order = $(this).sortable('toArray', {attribute: 'data-key'});

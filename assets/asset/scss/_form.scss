@@ -3,15 +3,14 @@ form {
         color: #989898;
     }
 
-    .required label.control-label, label.required {
-        margin-right: 0;
+    .required label.control-label, label.required, .required label.col-form-label {
 
-        &::before {
+        &::after {
             content: '*';
             color: #ff0000;
             font-size: 13px;
             line-height: 12px;
-            margin-right: 5px;
+            margin-left: 5px;
             font-family: monospace;
             position: relative;
             top: -5px;
@@ -19,7 +18,7 @@ form {
     }
 
     .required.no-required {
-        label.control-label {
+        label.control-label, label.col-form-label {
             &::before {
                 content: '';
                 margin-right: 0;
@@ -38,12 +37,13 @@ form {
         white-space: pre-wrap;
     }
 
-    .error-summary {
-        color: #a94442;
-        background: #fdf7f7;
-        border-left: 3px solid #eed3d7;
-        padding: 10px 20px;
-        margin: 0 0 15px 0;
+    .error-summary ul {
+        margin: 0;
+        padding-left: 0.5rem;
+
+        li {
+            list-style: none;
+        }
     }
 
     fieldset legend {

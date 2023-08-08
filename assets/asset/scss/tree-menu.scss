@@ -1,0 +1,44 @@
+.tree-menu {
+    a {
+        text-decoration: none;
+
+        &:active, &.active {
+            color: red
+        }
+    }
+
+    .nodes {
+        margin-left: 1em;
+    }
+
+    .no-nodes {
+        margin-left: 1em;
+    }
+
+    &.not-root > .nodes  {
+        margin-left: 0;
+    }
+
+    .collapsed, .expanded, &.collapsed, &.expanded {
+        .to-collapse, .to-expand {
+            display: none;
+            cursor: pointer;
+        }
+    }
+
+    .collapsed, &.collapsed {
+        & > .to-expand {
+            display: inline-block;
+        }
+
+        & > .nodes {display: none}
+    }
+
+    .expanded, &.expanded {
+        & > .to-collapse {
+            display: inline-block;
+        }
+
+        & > .nodes {display: block}
+    }
+}

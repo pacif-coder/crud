@@ -1,3 +1,21 @@
+main .row:last-child {margin-bottom: 1em;}
+
+.breadcrumb {margin: 0;}
+
+.main-title h1 span.with-quota, .breadcrumb a span.with-quota {
+    &::before, &::after {
+        color: var(--bs-gray);
+    }
+
+    &::before {
+        content: "«";
+    }
+
+    &::after {
+        content: "»";
+    }
+}
+
 .main-title {
 
     h1 {
@@ -8,25 +26,6 @@
         & > a {
             position: relative;
             top: 5px;
-        }
-
-        & > span {
-            color: #5cb85c;
-
-            &.with-quota {
-                &:after, &:before {
-                    color: #a0a3a0;
-                    font-size: 40px;
-                }
-
-                &:after {
-                    content: "\00BB";
-                }
-
-                &:before {
-                    content: "\00AB";
-                }
-            }
         }
     }
 
