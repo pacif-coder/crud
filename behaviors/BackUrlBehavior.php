@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\behaviors;
+namespace Crud\behaviors;
 
 use Yii;
 use yii\base\Behavior;
@@ -18,7 +18,7 @@ use yii\base\Controller;
  *
  *      public function behaviors() {
  *          $behaviors = parent::behaviors();
- *          $behaviors['backUrl'] = app\modules\crud\behaviors\BackUrlBehavior::className();
+ *          $behaviors['backUrl'] = BackUrlBehavior::class;
  *          return $behaviors;
  *      }
  *
@@ -33,12 +33,14 @@ use yii\base\Controller;
  * }
  * ```
  */
-class BackUrlBehavior extends Behavior {
+class BackUrlBehavior extends Behavior
+{
     public $ignoreScheme = true;
 
     const BACK_URL_PARAM = 'back-url';
 
-    public function getBackUrl() {
+    public function getBackUrl()
+    {
         $url = Yii::$app->request->get(self::BACK_URL_PARAM);
         if (null !== $url) {
             return $url;
@@ -69,9 +71,33 @@ class BackUrlBehavior extends Behavior {
         }
     }
 
-    public static function addBackUrl($urlTo) {
+    public static function addBackUrl($urlTo, $hash = null)
+    {
+        $request = Yii::$app->request;
+
+        // get current url without BACK_URL_PARAM in request params
+        $get = [];
+        $query = parse_url($request->getUrl(), PHP_URL_QUERY);
+        if ($query) {
+            parse_str($query, $get);
+        }
+
+        if (isset($get[self::BACK_URL_PARAM])) {
+            unset($get[self::BACK_URL_PARAM]);
+        }
+
+        $currentUrl = '/' . $request->getPathInfo();
+        if ($get) {
+            $currentUrl .= '?' . http_build_query($get);
+        }
+
+        if (null !== $hash) {
+            $currentUrl .= "#{$hash}";
+        }
+
+        // is params case
         if (is_array($urlTo)) {
-            $urlTo[self::BACK_URL_PARAM] = Yii::$app->request->getUrl();
+            $urlTo[self::BACK_URL_PARAM] = $currentUrl;
             return $urlTo;
         }
 
@@ -83,7 +109,7 @@ class BackUrlBehavior extends Behavior {
                 parse_str($parts['query'], $urlTo);
             }
 
-            $urlTo[self::BACK_URL_PARAM] = Yii::$app->request->getUrl();
+            $urlTo[self::BACK_URL_PARAM] = $currentUrl;
 
             $url = '';
             if ($parts['path']) {
@@ -98,21 +124,24 @@ class BackUrlBehavior extends Behavior {
         }
     }
 
-    public function events() {
+    public function events()
+    {
         return [
             Controller::EVENT_AFTER_ACTION => 'saveUrl',
             Controller::EVENT_BEFORE_ACTION => 'setReturnUrl',
         ];
     }
 
-    public function setReturnUrl() {
+    public function setReturnUrl()
+    {
         $url = $this->getBackUrl();
         if (null !== $url) {
             Yii::$app->getUser()->setReturnUrl($url);
         }
     }
 
-    public function saveUrl() {
+    public function saveUrl()
+    {
         $session = Yii::$app->session;
         if (!$session->isActive) {
             return;
@@ -143,7 +172,8 @@ class BackUrlBehavior extends Behavior {
      * with a redundant port parameter, so for https
      * connections, the value is 'https://server.com:433'
      */
-    protected function getHostInfo() {
+    protected function getHostInfo()
+    {
         $hostInfo = Yii::$app->request->getHostInfo();
 
         $hostInfoComponents = parse_url($hostInfo);
@@ -161,7 +191,8 @@ class BackUrlBehavior extends Behavior {
         return substr($hostInfo, 0, -strlen($postInfo));
     }
 
-    protected function getSessionParam() {
+    protected function getSessionParam()
+    {
         return '_' . self::class . '-' . self::BACK_URL_PARAM;
     }
 }
