@@ -1,0 +1,21 @@
+{block main/title/breadcrumbs}
+    {include 'title/breadcrumbs.latte'}
+{/block}
+
+<div class="main-title">
+    {block main/title/buttons}
+        {if isset($builder) && $builder->isExtraControlExist('title')}
+            <div class="buttons-right">
+                {$builder->extraControlsByPlace('title')|noescape}
+            </div>
+        {/if}
+    {/block}
+
+    {block main/title/h1}
+        <h1 n:if="$title">
+            {quotPair2span($title, 'with-quota text-success text-opacity-75')|noescape}
+        </h1>
+    {/block}
+</div>
+
+{include 'title/alerts.latte'}

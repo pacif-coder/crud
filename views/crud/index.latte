@@ -1,0 +1,8 @@
+{layout 'layouts/main.latte'}
+
+{block main/content/center}
+{php
+    $grid = $builder->gridClass::begin($builder->getOptions());
+    $builder->gridClass::end();
+}
+{/block}

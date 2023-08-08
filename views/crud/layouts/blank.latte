@@ -1,0 +1,83 @@
+{php
+    $view->beginPage();
+}
+<!DOCTYPE html>
+<html lang="{$app->language}" class="h-100" data-bs-theme="auto">
+<head>
+<title n:spaceless>
+    {block title}
+        {$view->title}
+
+        {if $view->title}
+            /
+        {/if}
+
+    {/block}
+</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{$view->head()}
+</head>
+<body class="d-flex flex-column h-100">
+{php $view->beginBody()}
+
+{block header}
+<header class="border-bottom mb-2">
+    <nav class="navbar navbar-expand-md">
+        <div class="container-fluid">
+            {block header/logo}
+                <a href="/">Logo</a>
+            {/block}
+
+            <div class="collapse navbar-collapse justify-content-end" id="navbarCollapse">
+                <ul class="navbar-nav">
+                    {foreach $context->topMenu as $name => $link}
+                    <li class="nav-item">
+                        <a class="nav-link " aria-current="page" href="{$link}">{$name}</a>
+                    </li>
+                    {/foreach}
+                </ul>
+            </div>
+        </div>
+    </nav>
+</header>
+{/block}
+
+{block loader}
+    {include '../include/loader.latte'}
+{/block}
+
+{block main}
+    <main class="container-fluid">
+        {block main/title}
+            {include '../include/title.latte'}
+        {/block}
+
+        {block main/content}
+            {block main/content/left}{/block}
+            {block main/content/center}{/block}
+            {block main/content/right}{/block}
+        {/block}
+    </main>
+{/block}
+
+{block footer}
+    <footer class="footer mt-auto py-1 border-top">
+        <div class="container-fluid">
+            {block footer/left}
+                {var $now = date_create()}
+                &copy; {$now->format('Y')}
+            {/block}
+        </div>
+    </footer>
+{/block}
+
+{if YII_ENV_PROD}
+    {* include '../include/yandex-metrika.html' *}
+    {* include '../include/gtag.html' *}
+{/if}
+
+{php $view->endBody()}
+{block afterEndBody}{/block}
+</body>
+</html>
+{php $view->endPage()}

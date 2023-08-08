@@ -1,0 +1,14 @@
+<nav aria-label="breadcrumb" n:if="$breadcrumbs->links" class="small">
+    <ol class="breadcrumb">
+        {foreach $breadcrumbs->links as $item}
+            <li class="breadcrumb-item">
+                <a href="{$item->url}" class="text-decoration-none">
+                    {first}
+                        <i class="bi bi-house-door mr-5" n:if="$breadcrumbs->withHome"></i>
+                    {/first}
+                    {$item->label}
+                </a>
+            </li>
+        {/foreach}
+    </ol>
+</nav>

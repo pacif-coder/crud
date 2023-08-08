@@ -1,0 +1,17 @@
+{layout 'layouts/main.latte'}
+
+{block main/content/center}
+{php
+    $formClass = $builder->getFormClass();
+    $form = $formClass::begin($builder->getFormConfig());
+
+    echo $form->errorSummary($model, ['showAllErrors' => true, 'header' => false, 'class' => 'error-summary']);
+    echo $builder->formBody2string($form, $model);
+}
+
+{include 'include/bottom-buttons.latte'}
+
+{php
+    $formClass::end();
+}
+{/block}

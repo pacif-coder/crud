@@ -1,0 +1,34 @@
+{foreach $app->session->getAllFlashes() as $type => $message}
+    {php
+        $icon = '';
+        switch ($type) {
+            case 'success':
+                $icon = 'ok';
+                break;
+
+            case 'warning':
+                $icon = 'question-sign';
+                break;
+
+            case 'info':
+                $icon = 'info-sign';
+                break;
+
+            case 'danger':
+                $icon = 'remove-sign';
+                break;
+        }
+
+        if ($icon) {
+            $icon = \Crud\helpers\Html::icon($icon, 'h5 me-2 mb-0 float-start');
+        }
+    }
+    <div class="alert alert-{$type} clearfix">
+        {$icon|noescape}
+        <div class="overflow-auto">
+        {php
+            echo nl2br(is_array($message)? implode("\n", $message) : $message);
+        }
+        </div>
+    </div>
+{/foreach}

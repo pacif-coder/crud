@@ -1,0 +1,17 @@
+{php
+    $isBottomsLeft = $builder->isExtraControlExist('bottom/left');
+    $isBottomsRight = $builder->isExtraControlExist('bottom/right');
+}
+
+{if $isBottomsLeft || $isBottomsRight}
+<hr class="border-top">
+<div class="row">
+    <div class="col bottom-buttons text-left text-start" n:if="$isBottomsLeft">
+        {$builder->extraControlsByPlace('bottom/left')|noescape}
+    </div>
+
+    <div class="col bottom-buttons text-right text-end" n:if="$isBottomsRight">
+        {$builder->extraControlsByPlace('bottom/right')|noescape}
+    </div>
+</div>
+{/if}
