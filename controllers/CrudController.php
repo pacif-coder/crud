@@ -1,27 +1,38 @@
 <?php
-namespace app\modules\crud\controllers;
+namespace Crud\controllers;
 
 use Yii;
-use yii\web\NotFoundHttpException;
 use yii\base\InvalidConfigException;
+use yii\base\Theme;
+use yii\web\NotFoundHttpException;
 
-use app\modules\crud\helpers\ClassI18N;
-use app\modules\crud\helpers\ParentModel;
-use app\modules\crud\helpers\ModelName;
-use app\modules\crud\models\ModelWithParentInterface;
-use app\modules\crud\widgets\Breadcrumbs;
+use Crud\latte\CrudTemplateParameters;
+use Crud\latte\LatteRenderer;
+use Crud\helpers\ClassI18N;
+use Crud\helpers\ParentModel;
+use Crud\helpers\ModelName;
+use Crud\models\ModelWithParentInterface;
+
+use ReflectionClass;
 
 /**
  * Default controller for the CRUD module
  *
- * @property string $title Page title
  */
 abstract class CrudController extends BaseController
 {
     public $modelClass;
-    public $modelSearchClass;
 
     public $parentModelID;
+
+    public $topMenu = [];
+
+    /**
+     * @var CrudTemplateParameters
+     */
+    protected $templateParams;
+
+    protected $titleParams = [];
 
     public function init()
     {
@@ -38,6 +49,61 @@ abstract class CrudController extends BaseController
         if (is_subclass_of($this->modelClass, ModelWithParentInterface::class)) {
             $this->parentModelID = $this->getModelID();
         }
+
+        $this->layout = false;
+
+        $this->fillTemplateFindPaths();
+        $this->mapFakeTheme();
+
+        $this->templateParams = Yii::createObject(CrudTemplateParameters::class);
+    }
+
+    protected function fillTemplateFindPaths()
+    {
+        $view = $this->getView();
+        $view->renderers['latte']['class'] = LatteRenderer::class;
+        $view->renderers['latte']['options']['templateDirs'] = $this->getTemplateFindPaths();
+    }
+
+    protected function getTemplateFindPaths()
+    {
+        $templatePaths = [
+            $this->getViewPath(),
+        ];
+
+        $ref = new ReflectionClass($this);
+        $class = $ref->getParentClass()->name;
+        while ($class) {
+            if (0 === strpos($class, 'yii\\')) {
+                break;
+            }
+
+            $ref = new ReflectionClass($class);
+            if ($class == self::class) {
+                $templatePaths[] = realpath(dirname($ref->getFileName()) . '/../views/crud/');
+                break;
+            }
+
+            $class = $ref->getParentClass()->name;
+        }
+
+        return $templatePaths;
+    }
+
+    protected function mapFakeTheme()
+    {
+        $templateFindPaths = $this->getTemplateFindPaths();
+        if (!$templateFindPaths) {
+            return;
+        }
+
+        $first = reset($templateFindPaths);
+
+        $fakeTheme = new Theme();
+        $fakeTheme->pathMap[$first] = $templateFindPaths;
+
+        $view = $this->getView();
+        $view->theme = $fakeTheme;
     }
 
     /**
@@ -47,26 +113,45 @@ abstract class CrudController extends BaseController
     public function actionIndex()
     {
         // build grid
-        $builder = $this->buildGrid();
+        $this->templateParams->builder = $this->buildGrid();
 
         $this->createIndexTitle();
 
         $this->createIndexBreadcrumbs();
 
-        return $this->render('index', compact(['builder']));
+        return $this->render('index.latte', $this->templateParams);
     }
 
     protected function createIndexTitle()
     {
         $model = $this->createModel();
-        $this->title = $this->t('List items', $this->getTitleParams($model));
+        $this->model2titleParams($model);
+
+        $title = null;
+        if (!$this->getModelID()) {
+            $message = 'Top list items';
+            $title = $this->t($message, $this->titleParams);
+            if ($title == $message) {
+                $title = null;
+            }
+        }
+
+        if (!$title) {
+            $title = $this->t('List items', $this->titleParams);
+        }
+
+        $this->title = $title;
     }
 
     protected function createIndexBreadcrumbs()
     {
-        $view = $this->getView();
-        $br = new Breadcrumbs();
-        $view->params['breadcrumbs'] = $br->createIndexBreadcrumbs($this->createModel());
+        if (is_array($this->breadcrumbs)) {
+            $this->breadcrumbs['withBegin'] = (bool) $this->getModelID();
+        }
+
+        $this->breadcrumbs = Yii::createObject($this->breadcrumbs);
+        $this->breadcrumbs->createIndexBreadcrumbs($this->createModel());
+        $this->templateParams->breadcrumbs = $this->breadcrumbs;
     }
 
     /**
@@ -97,29 +182,34 @@ abstract class CrudController extends BaseController
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function _actionEdit($create)
+    protected function _actionEdit($isCreate)
     {
-        $model = $create? $this->createModel() : $this->findModel();
+        $model = $isCreate ? $this->createModel() : $this->findModel();
+        $this->templateParams->model = $model;
+
+        $this->model2titleParams($model);
 
         $builder = $this->buildForm($model);
-        if ($builder->data2model($this->request->post(), $model)) {
+        $this->templateParams->builder = $builder;
+
+        $post = $this->request->post();
+        if ($this->request->isPost && $builder->data2model($post, $model)) {
             return $this->goBack();
         }
 
-        $this->createEditTitle($create, $model);
+        $this->createEditTitle($isCreate, $model);
 
-        $this->createEditBreadcrumbs($model);
+        $this->createEditBreadcrumbs($isCreate, $model);
 
-        return $this->render('edit', compact(['model', 'builder']));
+        return $this->render('edit.latte', $this->templateParams);
     }
 
     protected function createEditTitle($isCreate, $model)
     {
-        $params = $this->getTitleParams($model);
         if ($isCreate) {
-            $this->title = $this->t('Create item');
-        } elseif (isset($params['nameAttribute'])) {
-            $this->title = $this->t('Update item "{nameAttribute}"', $params);
+            $this->title = $this->t('Create item', $this->titleParams);
+        } elseif (isset($this->titleParams['nameAttribute'])) {
+            $this->title = $this->t('Update item "{nameAttribute}"', $this->titleParams);
         } else {
             $this->title = $this->t('Update item');
         }
@@ -142,86 +232,71 @@ abstract class CrudController extends BaseController
             $begin = $pagination->getOffset();
         }
 
-        $sort_attr = $this->modelClass::ORDER_ATTR;
-        foreach ($sort as $index => $keys) {
-            $model = $this->modelClass::findOne($keys);
+        $sortAttr = $this->modelClass::ORDER_ATTR;
+        $maxSort = $this->modelClass::find()->addSelect("max([[{$sortAttr}]])")->scalar();
+
+        // the value of the sort attribute must be unique - so move the objects to
+        // the end first, and then put them in the right position
+        $moved = [];
+        $idKey = current($this->modelClass::primaryKey());
+        foreach ($this->modelClass::findAll($sort) as $model) {
+            $id = $model->{$idKey};
+            $index = array_search($id, $sort);
+
             $pos = $index + $begin + 1;
-            if ($pos == $model->{$sort_attr}) {
+            if ($pos == $model->{$sortAttr}) {
                 continue;
             }
 
-            $model->{$sort_attr} = $pos;
+            $movePos = $index + $maxSort + 1;
+            $model->{$sortAttr} = $movePos;
+            $model->save();
+
+            $moved[$id] = $pos;
+        }
+
+        foreach ($this->modelClass::findAll(array_keys($moved)) as $model) {
+            $id = $model->{$idKey};
+            $pos = $moved[$id];
+            if ($pos == $model->{$sortAttr}) {
+                continue;
+            }
+
+            $model->{$sortAttr} = $pos;
             $model->save();
         }
 
         return $this->goBack();
     }
 
-    /**
-     * Show an existing model object.
-     * If update is successful, the browser will be redirected to the 'back' url page.
-     * @param string $id
-     * @return mixed
-     * @throws NotFoundHttpException if the model cannot be found
-     */
-    protected function actionRead()
+    protected function model2titleParams($model)
     {
-        $model = $this->findModel();
-        $this->createReadTitle($model);
-
-        $builder = $this->getFromBuilder();
-        return $this->render('read', compact(['model', 'builder']));
-    }
-
-    protected function createReadTitle($model)
-    {
-        $params = $this->getTitleParams($model);
-        if (isset($params['nameAttribute'])) {
-            $this->title = $this->t('Show item "{nameAttribute}"', $params);
-        } else {
-            $this->title = $this->t('Show item');
-        }
-    }
-
-    protected function getTitleParams($model)
-    {
-        $params = [];
+        $this->titleParams = [];
 
         $name = ModelName::getName($model);
         if ($name) {
-            $params['nameAttribute'] = ModelName::getName($model);
+            $this->titleParams['nameAttribute'] = $name;
         }
 
-        $parents = ParentModel::loadParents($model);
-        if ($parents) {
-            $params['parentModelName'] = end($parents)['name'];
+        if (is_a($model, ModelWithParentInterface::class)) {
+            $parents = ParentModel::loadParents($model);
+            if ($parents) {
+                $this->titleParams['parentModelName'] = end($parents)['name'];
+            }
         }
-
-        return $params;
     }
 
-    protected function addParentToBreadcrumbs($model)
+    protected function createEditBreadcrumbs($isCreate, $model)
     {
-        $parents = ParentModel::loadParents($model);
-
-        $params = [];
-        if ($parents) {
-            $params = [
-                'parentModelName' => end($parents)['parentName'],
-                'nameAttribute' => end($parents)['name'],
-            ];
+        if (is_array($this->breadcrumbs)) {
+            $this->breadcrumbs['withBegin'] = (bool) $this->getModelID();
+            $this->breadcrumbs['lastUrl'] = $this->getBackUrl();
         }
 
-        $this->addToBreadcrumbs($this->getBackUrl(),
-                Yii::t($this->messageCategory, 'List items', $params));
-    }
+        $this->breadcrumbs = Yii::createObject($this->breadcrumbs);
+        $this->breadcrumbs->createEditBreadcrumbs($model);
 
-    protected function createEditBreadcrumbs($model)
-    {
-        $br = new Breadcrumbs();
-
-        $view = $this->getView();
-        $view->params['breadcrumbs'] = $br->createEditBreadcrumbs($model, $this->getBackUrl());
+        $this->templateParams->breadcrumbs = $this->breadcrumbs;
     }
 
     /**
@@ -283,5 +358,14 @@ abstract class CrudController extends BaseController
     public function getModelID()
     {
         return $this->request->get('id');
+    }
+
+    protected function setTitle($title)
+    {
+        parent::setTitle($title);
+
+        if ($this->templateParams) {
+            $this->templateParams->title = $title;
+        }
     }
 }

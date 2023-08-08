@@ -1,8 +1,7 @@
 <?php
-namespace app\modules\crud\controllers;
+namespace Crud\controllers;
 
 use Yii;
-use yii\base\Theme;
 use yii\di\Instance;
 use yii\helpers\Url;
 use yii\web\BadRequestHttpException;
@@ -10,12 +9,12 @@ use yii\web\NotFoundHttpException;
 use yii\web\Request;
 use yii\web\Response;
 
-use app\modules\crud\Module as CrudModule;
-use app\modules\crud\assets\CrudAsset;
-use app\modules\crud\behaviors\BackUrlBehavior;
-use app\modules\crud\builder\FormBuilder;
-use app\modules\crud\builder\GridBuilder;
-use app\modules\crud\widgets\Breadcrumbs;
+use Crud\assets\CrudAsset;
+use Crud\behaviors\BackUrlBehavior;
+use Crud\builder\FormBuilder;
+use Crud\builder\GridBuilder;
+use Crud\helpers\Lang;
+use Crud\widgets\Breadcrumbs;
 
 /**
  *
@@ -27,6 +26,10 @@ abstract class BaseController extends \yii\web\Controller
     public $assets = [];
 
     public $defaultAsset = CrudAsset::class;
+
+    public $breadcrumbs = [
+        'class' => Breadcrumbs::class,
+    ];
 
     /**
      * @var Request|array|string The request.
@@ -84,7 +87,12 @@ abstract class BaseController extends \yii\web\Controller
             $view->registerAssetBundle($asset);
         }
 
-        $this->mapFakeTheme();
+        $this->registerTranslations();
+    }
+
+    public function registerTranslations()
+    {
+        Lang::addCategory2Path('crud', dirname(__DIR__) . '/messages');
     }
 
     /**
@@ -163,43 +171,26 @@ abstract class BaseController extends \yii\web\Controller
         return $this->gridBuilder;
     }
 
-    protected function mapFakeTheme()
-    {
-        $view = $this->getView();
-
-        $crudModule = new CrudModule('crud');
-        $crudViewPath = $crudModule->getViewPath() . DIRECTORY_SEPARATOR . $crudModule->defaultRoute;
-
-        $thisViewPath = $this->getViewPath();
-
-        $fakeTheme = new Theme();
-        $fakeTheme->pathMap[$thisViewPath] = [
-            $thisViewPath,
-            $crudViewPath,
-        ];
-
-        $view->theme = $fakeTheme;
-    }
-
-    protected function createEditBreadcrumbs($model)
-    {
-        $br = new Breadcrumbs();
-
-        $view = $this->getView();
-        $view->params['breadcrumbs'] = $br->createEditBreadcrumbs($model, $this->getBackUrl());
-    }
-
     protected function addToBreadcrumbs($url, $label)
     {
-        $view = $this->getView();
-        $view->params['breadcrumbs'][] = ['url' => Url::toRoute($url),
-            'label' => $label];
+        $this->breadcrumbs = Yii::createObject($this->breadcrumbs);
+
+        $this->breadcrumbs->links[] = [
+            'url' => Url::toRoute($url),
+            'label' => $label
+        ];
     }
 
     protected function setTitle($title)
     {
         $view = $this->getView();
         $view->title = $title;
+    }
+
+    protected function getTitle()
+    {
+        $view = $this->getView();
+        return $view->title;
     }
 
     protected function addFlashMessage($messageType, $value = true, $removeAfterAccess = true)
@@ -209,7 +200,7 @@ abstract class BaseController extends \yii\web\Controller
 
     protected function t($message, $params = [], $language = null)
     {
-        return Yii::t($this->messageCategory, $message, $params, $language);
+        return Lang::t($this->messageCategory, $message, $params, $language);
     }
 
     protected function _findModel($class, $id, $exception404 = true)
@@ -235,31 +226,31 @@ abstract class BaseController extends \yii\web\Controller
 
     protected function beforeFilterApply(\yii\base\Event $event)
     {
-        /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
+        /* @var $gridBuilder GridBuilder */
         $gridBuilder = $event->sender;
     }
 
     protected function beforeGridBuild(\yii\base\Event $event)
     {
-        /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
+        /* @var $gridBuilder \Crud\builder\GridBuilder */
         $gridBuilder = $event->sender;
     }
 
     protected function afterGridBuild(\yii\base\Event $event)
     {
-        /* @var $gridBuilder \app\modules\crud\builder\GridBuilder */
+        /* @var $gridBuilder \Crud\builder\GridBuilder */
         $gridBuilder = $event->sender;
     }
 
     protected function beforeFormBuild(\yii\base\Event $event)
     {
-        /* @var $formBuilder \app\modules\crud\builder\FormBuilder */
+        /* @var $formBuilder \Crud\builder\FormBuilder */
         $formBuilder = $event->sender;
     }
 
     protected function afterFormBuild(\yii\base\Event $event)
     {
-        /* @var $formBuilder \app\modules\crud\builder\FormBuilder */
+        /* @var $formBuilder \Crud\builder\FormBuilder */
         $formBuilder = $event->sender;
     }
 }

@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\controllers;
+namespace Crud\controllers;
 
 use Yii;
 
