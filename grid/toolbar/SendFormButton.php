@@ -1,12 +1,12 @@
 <?php
-namespace app\modules\crud\grid\toolbar;
+namespace Crud\grid\toolbar;
 
 use yii\grid\CheckboxColumn;
 use yii\grid\GridView;
 
-use app\modules\crud\grid\MatrixGridView;
-use app\modules\crud\grid\toolbar\Button;
-use app\modules\crud\grid\toolbar\NeedCheckboxColumnInterface;
+use Crud\grid\MatrixGridView;
+use Crud\grid\toolbar\Button;
+use Crud\grid\toolbar\NeedCheckboxColumnInterface;
 
 /**
  * Description of Delete

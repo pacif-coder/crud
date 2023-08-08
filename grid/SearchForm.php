@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\grid;
+namespace Crud\grid;
 
 use yii\bootstrap\ActiveForm;
 

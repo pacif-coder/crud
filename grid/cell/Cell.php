@@ -1,10 +1,10 @@
 <?php
-namespace app\modules\crud\grid\cell;
+namespace Crud\grid\cell;
 
 use yii\helpers\Html;
 
-use app\modules\crud\helpers\ModelName;
-use app\modules\crud\grid\column\ActionLinkTrait;
+use Crud\helpers\ModelName;
+use Crud\grid\column\ActionLinkTrait;
 
 /**
  */
@@ -29,11 +29,7 @@ class Cell extends \ThumbOnDemand\widgets\Cell
 
     protected function withLink($model, $key, $index)
     {
-        if (!$this->withLink) {
-            return $this->withLink;
-        }
-
-        return $this->checkPermission($model, $key, $index);
+        return $this->withLink && $this->checkPermission($model, $key, $index);
     }
 
     protected function getName($model, $key, $index)

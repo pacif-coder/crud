@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\grid\column;
+namespace Crud\grid\column;
 
 use yii\helpers\Html;
 use yii\helpers\Json;

@@ -1,14 +1,13 @@
 <?php
-namespace app\modules\crud\grid;
+namespace Crud\grid;
 
 use Yii;
 use yii\helpers\Json;
 use yii\helpers\Html;
 
-use app\modules\crud\grid\GridViewAsset;
-use app\modules\crud\grid\toolbar\GridToolbarButtonAsset;
-use app\modules\crud\grid\Toolbar;
-use app\modules\crud\grid\Dragable;
+use Crud\grid\GridViewAsset;
+use Crud\grid\toolbar\GridToolbarButtonAsset;
+use Crud\grid\Toolbar;
 
 /**
  *
@@ -26,15 +25,13 @@ trait GridViewTrait
     public $removeToolbarButtons = [];
     public $toolbarButtonOptions = [];
 
-    public $dragable;
-    public $dragableСlass = Dragable::class;
-    public $dragableOptions = [];
-
     public $isInsideForm;
     public $surroundForm;
     public $surroundFormAction = '';
     public $surroundFormMethod = 'post';
     public $surroundFormOptions = [];
+
+    public $messageCategory;
 
     protected function registerDragable()
     {

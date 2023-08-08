@@ -1,17 +1,17 @@
 <?php
-namespace app\modules\crud\grid\toolbar;
+namespace Crud\grid\toolbar;
 
-use app\modules\crud\helpers\ClassI18N;
+use Crud\helpers\ClassI18N;
 
 /**
  * @XXX
  *
  */
-class Button extends \app\modules\crud\controls\Base
+class Button extends \Crud\controls\Base
 {
     public $grid;
 
-    public $sizeClass = 'btn-xs';
+    public $size = 'small';
 
     public $columnData2this;
 

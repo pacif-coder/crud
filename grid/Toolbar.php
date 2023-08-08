@@ -1,11 +1,11 @@
 <?php
-namespace app\modules\crud\grid;
+namespace Crud\grid;
 
 use Yii;
 use yii\helpers\Html;
-use app\modules\crud\grid\toolbar\NeedCheckboxColumnInterface;
+use Crud\grid\toolbar\NeedCheckboxColumnInterface;
 
-use app\modules\crud\controls\Base;
+use Crud\controls\Base;
 
 /**
  * Create and show grid buttons

@@ -1,11 +1,11 @@
 <?php
-namespace app\modules\crud\grid\column;
+namespace Crud\grid\column;
 
 use Yii;
 use yii\base\InvalidConfigException;
 
 /**
- * Create link to child model controller 
+ * Create link to child model controller
  */
 class LinkToModelColumn extends ActionLinkColumn
 {
@@ -28,6 +28,10 @@ class LinkToModelColumn extends ActionLinkColumn
     {
         if ($this->controller) {
             return $this->controller;
+        }
+
+        if (!Yii::$app->has('class2controller')) {
+            return;
         }
 
         return Yii::$app->class2controller->getController($this->modelClass);

@@ -1,12 +1,16 @@
 <?php
-namespace app\modules\crud\grid;
+namespace Crud\grid;
 
 use Yii;
 use yii\grid\GridViewAsset as BaseGridViewAsset;
 use yii\widgets\BaseListView;
 
-use app\modules\crud\grid\column\DataColumn;
-use app\modules\crud\controls\CopyMessageCategoryInterface;
+use Crud\grid\column\CheckboxColumn;
+use Crud\grid\column\DataColumn;
+
+use Crud\controls\CopyMessageCategoryInterface;
+
+use Crud\grid\Dragable;
 
 /**
  *
@@ -22,12 +26,18 @@ implements CopyMessageCategoryInterface
     public $layout = "{toolbar}\r\n{items}\r\n{summary}\r\n{pager}";
 
     public $addCheckboxColumn;
-    public $checkboxColumn = 'app\modules\crud\grid\column\CheckboxColumn';
+    public $checkboxColumn = CheckboxColumn::class;
 
     public $addActionColumn = false;
     public $actionColumn = 'yii\grid\ActionColumn';
 
     public $messageCategory;
+
+    public $dragable;
+    public $dragableСlass = Dragable::class;
+    public $dragableOptions = [];
+
+    public $renamedLink2ModelAttr = [];
 
     protected function initColumns()
     {

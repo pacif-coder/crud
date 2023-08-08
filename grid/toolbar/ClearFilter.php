@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\grid\toolbar;
+namespace Crud\grid\toolbar;
 
 use yii\helpers\Url;
 use yii\grid\GridView;

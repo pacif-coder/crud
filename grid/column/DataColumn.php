@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\grid\column;
+namespace Crud\grid\column;
 
 /**
  *
@@ -17,6 +17,7 @@ class DataColumn extends \yii\grid\DataColumn
     protected function renderDataCellContent($model, $key, $index)
     {
         $str = parent::renderDataCellContent($model, $key, $index);
+
         return $this->truncateContent($str);
     }
 }

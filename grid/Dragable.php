@@ -1,11 +1,11 @@
 <?php
-namespace app\modules\crud\grid;
+namespace Crud\grid;
 
 use Yii;
 use yii\helpers\Url;
 
-use app\modules\crud\grid\GridView;
-use app\modules\crud\grid\dragable\DragableAsset;
+use Crud\grid\GridView;
+use Crud\grid\dragable\DragableAsset;
 
 /**
  * @XXX
@@ -19,7 +19,7 @@ class Dragable extends \yii\base\BaseObject
 
     public $selector = 'tbody';
 
-    public function attach(GridView &$grid)
+    public function attach(&$grid)
     {
         $view = $grid->getView();
         $view->registerAssetBundle(DragableAsset::class);
@@ -33,5 +33,4 @@ class Dragable extends \yii\base\BaseObject
 
         $grid->options['data-dragable-url'] = Url::toRoute($params);
     }
-
 }

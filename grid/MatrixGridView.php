@@ -1,7 +1,9 @@
 <?php
-namespace app\modules\crud\grid;
+namespace Crud\grid;
 
-use app\modules\crud\grid\cell\Cell;
+use Crud\grid\cell\Cell;
+
+use Crud\grid\dragable\MatrixGridDragable;
 
 /**
  *
@@ -14,8 +16,21 @@ class MatrixGridView extends \ThumbOnDemand\widgets\MatrixGridView
 
     public $cell = [
         'class' => Cell::class,
-        'tools' => '{checkbox}',
+        'tools' => ['checkbox'],
     ];
+
+    public $dragable;
+    public $dragableСlass = MatrixGridDragable::class;
+    public $dragableOptions = [];
+
+    public $renamedLink2ModelAttr = [];
+
+    public function run()
+    {
+        $this->registerDragable();
+
+        parent::run();
+    }
 
     /**
      * Runs the widget.

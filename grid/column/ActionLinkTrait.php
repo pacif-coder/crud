@@ -1,11 +1,11 @@
 <?php
-namespace app\modules\crud\grid\column;
+namespace Crud\grid\column;
 
 use Yii;
 use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 
-use app\modules\crud\behaviors\BackUrlBehavior;
+use Crud\behaviors\BackUrlBehavior;
 
 /**
  * [[GridView]] widget that displays buttons for viewing and manipulating the items.
@@ -71,6 +71,11 @@ trait ActionLinkTrait
     public $checkPermission = null;
 
     /**
+     * @var boolean
+     */
+    public $addHash = true;
+
+    /**
      * Creates a URL for the given action and model.
      * This method is called for each button and each row.
      *
@@ -103,7 +108,8 @@ trait ActionLinkTrait
         $params[0] = $controller? "{$controller}/{$action}" : $action;
 
         if ($this->backUrl) {
-            $params = BackUrlBehavior::addBackUrl($params);
+            $hash = $this->addHash? $index : null;
+            $params = BackUrlBehavior::addBackUrl($params, $hash);
         }
 
         return Url::toRoute($params);
@@ -126,6 +132,10 @@ trait ActionLinkTrait
     {
         if ($this->controller) {
             return $this->controller;
+        }
+
+        if (!Yii::$app->has('class2controller')) {
+            return;
         }
 
         $modelClass = $this->grid->dataProvider->query->modelClass;

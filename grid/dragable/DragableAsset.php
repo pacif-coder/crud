@@ -1,12 +1,12 @@
 <?php
-namespace app\modules\crud\grid\dragable;
+namespace Crud\grid\dragable;
 
 use yii\jui\JuiAsset;
 
 /**
  *
  */
-class DragableAsset extends \app\modules\crud\assets\BaseAsset
+class DragableAsset extends \Crud\assets\BaseAsset
 {
     public $js = [
         'js/dragable.js',

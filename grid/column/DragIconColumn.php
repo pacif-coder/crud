@@ -1,7 +1,7 @@
 <?php
-namespace app\modules\crud\grid\column;
+namespace Crud\grid\column;
 
-use yii\bootstrap\Html;
+use Crud\helpers\Html;
 
 /**
  *
@@ -15,6 +15,16 @@ class DragIconColumn extends \yii\grid\Column
      */
     protected function renderDataCellContent($model, $key, $index)
     {
-        return Html::button(Html::icon('move'), ['class' => 'btn btn-info btn-xs', 'data-role' => 'drag-icon-column']);
+        $size = Html::getSmallSize();
+        $attrs = [
+            'class' => "btn btn-info btn-{$size}",
+            'data-role' => 'drag-icon'
+        ];
+
+        if ($this->grid->dataProvider->getTotalCount() < 2) {
+            $attrs['disabled'] = 'disabled';
+        }
+
+        return Html::button(Html::icon('move'), $attrs);
     }
 }

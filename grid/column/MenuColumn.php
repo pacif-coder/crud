@@ -1,18 +1,18 @@
 <?php
-namespace app\modules\crud\grid\column;
+namespace Crud\grid\column;
 
 use Yii;
 use yii\helpers\ArrayHelper;
 
-use app\modules\crud\controls\Base;
+use Crud\controls\Base;
 
-use app\modules\crud\grid\toolbar\Link;
+use Crud\grid\toolbar\Link;
 
 /**
  *
  */
 class MenuColumn extends \yii\grid\Column
-implements \app\modules\crud\controls\CopyMessageCategoryInterface
+implements \Crud\controls\CopyMessageCategoryInterface
 {
     public $items = [];
 
@@ -23,7 +23,7 @@ implements \app\modules\crud\controls\CopyMessageCategoryInterface
     protected $itemClass = Link::class;
 
     protected static $defItemOptions = [
-        'sizeClass' => 'btn-xs',
+        'size' => 'small',
         'colorClass' => 'btn-success',
         'baseClass' => 'btn btn-block',
     ];

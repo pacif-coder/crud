@@ -1,11 +1,11 @@
 <?php
-namespace app\modules\crud\grid;
+namespace Crud\grid;
 
 use yii\base\DynamicModel;
 use yii\base\Model;
 use yii\db\ActiveRecord;
 
-use app\modules\crud\builder\GridBuilder;
+use Crud\builder\GridBuilder;
 
 class FilterModel extends DynamicModel {
     /**
