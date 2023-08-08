@@ -1,10 +1,10 @@
 <?php
-namespace app\modules\crud\widgets\assets;
+namespace Crud\widgets\assets;
 
 /**
  *
  */
-class CheckboxMartixAsset extends \app\modules\crud\assets\BaseAsset
+class CheckboxMartixAsset extends \Crud\assets\BaseAsset
 {
     public $css = [
         'css/checkbox-martix-list.css',

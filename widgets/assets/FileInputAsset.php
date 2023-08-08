@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\widgets\assets;
+namespace Crud\widgets\assets;
 
 use yii\bootstrap\BootstrapAsset;
 use yii\web\JqueryAsset;
@@ -7,15 +7,14 @@ use yii\web\JqueryAsset;
 /**
  *
  */
-class FileInputAsset extends \yii\web\AssetBundle {
-    public $sourcePath = __DIR__ . '/file-input';
-
+class FileInputAsset extends \Crud\assets\BaseAsset
+{
     public $css = [
-        'file-input.css',
+        'css/file-input.css',
     ];
 
     public $js = [
-        'file-input.js',
+        'js/file-input.js',
     ];
 
     public $depends = [

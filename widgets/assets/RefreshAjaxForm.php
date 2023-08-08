@@ -1,12 +1,12 @@
 <?php
-namespace app\modules\crud\widgets\assets;
+namespace Crud\widgets\assets;
 
 use yii\web\JqueryAsset;
 
 /**
  *
  */
-class RefreshAjaxForm extends \app\modules\crud\assets\BaseAsset
+class RefreshAjaxForm extends \Crud\assets\BaseAsset
 {
     public $js = [
         'js/refresh-ajax-form.js',
