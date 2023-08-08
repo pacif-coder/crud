@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\builder;
+namespace Crud\builder;
 
 use Yii;
 use yii\base\InvalidConfigException;
@@ -7,12 +7,14 @@ use yii\base\Model;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
-use yii\helpers\Html;
 
-use app\modules\crud\builder\Base;
-use app\modules\crud\helpers\Enum;
-use app\modules\crud\helpers\ModelName;
-use app\modules\crud\widgets\ActiveForm;
+use Crud\builder\Base;
+use Crud\helpers\Enum;
+use Crud\helpers\Html;
+use Crud\helpers\Lang;
+use Crud\helpers\ModelName;
+use Crud\widgets\ActiveForm;
+use Crud\widgets\ActiveFormBootstrap5;
 
 use Exception;
 
@@ -42,7 +44,7 @@ class FormBuilder extends Base
     public $formExtraControls = ['save', 'cancel'];
 
     public $form = [
-        'class' => ActiveForm::class,
+        'class' => null,
         'layout' => 'horizontal',
 
         'fieldConfig' => [
@@ -52,13 +54,19 @@ class FormBuilder extends Base
         ],
     ];
 
-    public $subObjects = [];
-    public $getSubObjectMethod = 'getSubObject';
-
-    protected $subFormBuilders = [];
-
     protected $_extraControlVar = 'form';
     protected $_extraControlDefPlace = 'bottom/right';
+
+    public function init()
+    {
+        parent::init();
+
+        if (5 == Html::getBootstrapVersion()) {
+            $this->form['class'] = ActiveFormBootstrap5::class;
+        } else {
+            $this->form['class'] = ActiveForm::class;
+        }
+    }
 
     public function build(Model $model)
     {
@@ -87,21 +95,6 @@ class FormBuilder extends Base
         }
 
         $this->beforeBuild();
-        $this->initNameAttr();
-
-        foreach ($this->subObjects as $subObjectName) {
-            $method = 'getSubObject';
-            $subObject = $model->{$method}($subObjectName);
-
-            $formBuilder = new self();
-            $formBuilder->fieldPrefix = Html::getInputName($model, $subObjectName);
-            $formBuilder->build($subObject);
-
-            $this->subFormBuilders[$subObjectName] = $formBuilder;
-
-            unset($subObject);
-            unset($formBuilder);
-        }
 
         $allows = $model->activeAttributes();
         foreach ($this->fieldTypes as $attr => $type) {
@@ -110,10 +103,8 @@ class FormBuilder extends Base
             }
         }
         $allows = array_merge($allows, $this->readyOnlyFields);
-        $allows = array_merge($allows, $this->subObjects);
 
         if (null === $this->fields) {
-// XXX add subobject
             $this->fields = array_intersect($model->attributes(), $allows);
             if (is_a($model, ActiveRecord::class)) {
                 $this->fields = array_diff($this->fields, $this->modelClass::primaryKey());
@@ -141,10 +132,6 @@ class FormBuilder extends Base
         }
 
         foreach ($this->fields as $field) {
-            if (in_array($field, $this->subObjects)) {
-                continue;
-            }
-
             $type = $this->getType($field, $model);
             if (!$type) {
                 continue;
@@ -165,10 +152,6 @@ class FormBuilder extends Base
 
     public function data2model($data, $model)
     {
-        if (!is_array($data) || !$data) {
-            return false;
-        }
-
         $skipDataFields = array_merge($this->readyOnlyFields, $this->removeFields);
         foreach ($this->fieldTypes as $field => $type) {
             if ('static' == $type || 'staticControl' == $type) {
@@ -186,7 +169,8 @@ class FormBuilder extends Base
             }
         }
 
-        return $model->load($data) && $model->save();
+        $model->load($data);
+        return $model->save();
     }
 
     protected function initEnumOptions($model, $attr)
@@ -199,8 +183,6 @@ class FormBuilder extends Base
             $this->initEnumOptionsByDesc($model, $attr);
         } elseif (Enum::isEnum($model, $attr)) {
             $this->enumOptions[$attr] = Enum::getList($model, $attr);
-        } else {
-            $this->initEnumOptionsByValidator($model, $attr);
         }
 
         if ($this->isAddEmptyEnumOption($attr) && isset($this->enumOptions[$attr])) {
@@ -255,23 +237,6 @@ class FormBuilder extends Base
 
         if (in_array($attr, $this->enumFields) || isset($this->enumOptions[$attr])) {
             return 'select';
-        }
-
-        return $this->uptakeType($attr);
-    }
-
-    protected function uptakeType($attr)
-    {
-        if (!$this->uptake) {
-            return;
-        }
-
-        if (in_array($attr, $this->phoneAttrs)) {
-            return 'phone';
-        }
-
-        if (in_array($attr, $this->emailAttrs)) {
-            return 'email';
         }
     }
 
@@ -344,7 +309,7 @@ class FormBuilder extends Base
             return $this->fieldsetLegends[$fieldset];
         }
 
-        return Yii::t($this->messageCategory, $fieldset);
+        return Lang::t($this->messageCategory, $fieldset);
     }
 
     public function getFormClass()
@@ -368,19 +333,6 @@ class FormBuilder extends Base
         }
 
         return $config;
-    }
-
-    public function field2string($field, \yii\widgets\ActiveForm $form, $model)
-    {
-        if (isset($this->subFormBuilders[$field])) {
-            $formBuilder = $this->subFormBuilders[$field];
-
-            $method = 'getSubObject';
-            $subObject = $model->{$method}($field);
-            return $formBuilder->formBody2string($form, $subObject);
-        }
-
-        return parent::field2string($field, $form, $model);
     }
 
     public function formBody2string($form, $model)

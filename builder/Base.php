@@ -1,21 +1,22 @@
 <?php
-namespace app\modules\crud\builder;
+namespace Crud\builder;
 
 use Yii;
 use yii\base\Event;
-use yii\bootstrap\Html;
 use yii\helpers\ArrayHelper;
+use yii\helpers\Html;
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
 use yii\validators\EmailValidator;
 
-use app\modules\crud\controls\CopyMessageCategoryInterface;
-use app\modules\crud\widgets\FileInput;
-use app\modules\crud\widgets\MaskedInput;
-use app\modules\crud\helpers\Enum;
-use app\modules\crud\helpers\ClassI18N;
-use app\modules\crud\helpers\ModelName;
+use Crud\controls\CopyMessageCategoryInterface;
+use Crud\controls\Base as BaseControl;
+use Crud\helpers\Enum;
+use Crud\helpers\ClassI18N;
+use Crud\helpers\ModelName;
+use Crud\widgets\FileInput;
+use Crud\widgets\MaskedInput;
 
 use Exception;
 use ReflectionClass;
@@ -74,13 +75,6 @@ class Base extends \yii\base\Component
     public $emptyEnumOptionLabel = '---';
 
     public $messageCategory;
-
-    public $nameAttr = null;
-
-    public $uptake = true;
-    public $phoneAttrs = ['phone', 'tel'];
-    public $emailAttrs = ['email'];
-    public $nameAttrs = ['name', 'title', 'fio', 'id'];
 
     public $dbType2fieldType = [
         'text' => 'textarea',
@@ -174,28 +168,6 @@ class Base extends \yii\base\Component
         $props = $ref->getProperties(ReflectionProperty::IS_PUBLIC);
         $thisVars = ArrayHelper::getColumn($props, 'name');
 
-        // check
-        if (YII_ENV_DEV) {
-            foreach (array_diff(array_keys($array), $thisVars) as $errorParam) {
-                $matchs = [];
-                foreach ($thisVars as $param) {
-                    $arr1 = array_unique(str_split(strtolower($param)));
-                    $arr2 = array_unique(str_split(strtolower($errorParam)));
-
-                    $matchs[$param] = count(array_intersect($arr1, $arr2));
-                }
-
-                arsort($matchs);
-                if ($matchs) {
-                    $bestScore = current($matchs);
-                    $showCount = max(array_count_values($matchs)[$bestScore], 5);
-                    $showParams = array_keys(array_slice($matchs, 0, $showCount));
-
-                    throw new Exception("Param '{$errorParam}' not exist. Most likely params is '" . implode("', '", $showParams) . "'");
-                }
-            }
-        }
-
         foreach (array_intersect(array_keys($array), $thisVars) as $param) {
             if (is_array($this->{$param}) && null === $array[$param]) {
                 $array[$param] = [];
@@ -224,15 +196,6 @@ class Base extends \yii\base\Component
         }
 
         return $source;
-    }
-
-    protected function initNameAttr()
-    {
-        if (null !== $this->nameAttr) {
-            return;
-        }
-
-        $this->nameAttr = ModelName::getNameAttr($this->modelClass);
     }
 
     protected function getControlTypeByDBColumn($attr)
@@ -340,27 +303,6 @@ class Base extends \yii\base\Component
         }
     }
 
-    protected function initEnumOptionsByValidator($model, $attr)
-    {
-        $this->initValidators($model);
-        if (!isset($this->validatorts[$attr])) {
-            return;
-        }
-
-        foreach ($this->validatorts[$attr] as $validator) {
-            if ($validator instanceof ExistValidator) {
-                $this->initEnumOptionsByExistValidator($validator, $attr);
-            }
-        }
-    }
-
-    protected function initEnumOptionsByExistValidator($validator, $attr)
-    {
-        /* @var $validator ExistValidator */
-        $this->enumOptions[$attr] = [];
-        $this->addEnumOptionsByExistValidator($this->enumOptions[$attr], $validator, $attr);
-    }
-
     protected function addEnumOptionsByExistValidator(&$options, $validator, $attr)
     {
         /* @var $validator ExistValidator */
@@ -397,6 +339,9 @@ class Base extends \yii\base\Component
             return;
         }
 
+        $controlBase = new ReflectionClass(BaseControl::class);
+        $controlNamespace = $controlBase->getNamespaceName();
+
         $this->_isExtraControlCreated = true;
         $this->_extraControlsByPlace = null;
 
@@ -415,7 +360,7 @@ class Base extends \yii\base\Component
 
                 // if the control name does not contain slashes - this is the internal button
                 if (false === strpos($control, '\\')) {
-                    $control = ['class' => 'app\modules\crud\controls\\' . ucfirst($control)];
+                    $control = ['class' => $controlNamespace . '\\' . ucfirst($control)];
                 } else {
                     $control = ['class' => $control];
                 }
