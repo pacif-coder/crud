@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\widgets;
+namespace Crud\widgets;
 
 use ReflectionClass, ReflectionProperty;
 

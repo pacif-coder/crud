@@ -1,7 +1,7 @@
 <?php
-namespace app\modules\crud\widgets;
+namespace Crud\widgets;
 
-use app\modules\crud\widgets\AjaxActiveField;
+use Crud\widgets\AjaxActiveField;
 
 /**
  *

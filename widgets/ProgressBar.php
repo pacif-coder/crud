@@ -1,10 +1,10 @@
 <?php
-namespace app\modules\crud\widgets;
+namespace Crud\widgets;
 
 use yii\helpers\Html;
 
-use app\modules\crud\widgets\assets\ProgressBarAsset;
-use app\modules\crud\widgets\assets\RefreshAjaxForm;
+use Crud\widgets\assets\ProgressBarAsset;
+use Crud\widgets\assets\RefreshAjaxForm;
 
 /**
  * ProgressBar

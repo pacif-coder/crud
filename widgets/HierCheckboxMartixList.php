@@ -1,10 +1,10 @@
 <?php
-namespace app\modules\crud\widgets;
+namespace Crud\widgets;
 
 use Yii;
 use yii\helpers\Html;
 
-use app\modules\crud\widgets\assets\CheckboxMartixAsset as Asset;
+use Crud\widgets\assets\CheckboxMartixAsset as Asset;
 
 /**
  * Displays the checkbox blocks with the header.

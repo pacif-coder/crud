@@ -1,12 +1,12 @@
 <?php
-namespace app\modules\crud\widgets;
+namespace Crud\widgets;
 
 use Yii;
 use yii\widgets\InputWidget;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 
-use app\modules\crud\widgets\assets\CheckboxMartixAsset as Asset;
+use Crud\widgets\assets\CheckboxMartixAsset as Asset;
 
 /**
  * fdsfs

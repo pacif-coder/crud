@@ -3,9 +3,9 @@ namespace Crud\widgets;
 
 use Crud\helpers\Html;
 
-class ActiveForm extends \yii\bootstrap\ActiveForm
+class ActiveFormBootstrap5 extends \yii\bootstrap5\ActiveForm
 {
-    public function errorSummary($models, $options = [])
+    public function errorSummary1($models, $options = [])
     {
         Html::addCssClass($options, $this->errorSummaryCssClass);
         $options['encode'] = $this->encodeErrorSummary;

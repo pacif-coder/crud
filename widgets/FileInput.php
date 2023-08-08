@@ -1,8 +1,10 @@
 <?php
-namespace app\modules\crud\widgets;
+namespace Crud\widgets;
+
+use Crud\helpers\Html;
 
 use yii\base\InvalidConfigException;
-use yii\bootstrap\Html;
+
 use yii\widgets\ActiveForm;
 use yii\bootstrap\InputWidget;
 
