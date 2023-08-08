@@ -1,14 +1,28 @@
 <?php
-namespace app\modules\crud\helpers;
+namespace Crud\helpers;
 
 use Yii;
 use yii\helpers\ArrayHelper;
+
+use yii\bootstrap\Html as Bootstrap3Html;
+
+use Crud\helpers\Lang;
 
 /**
  *
  */
 class Html extends \yii\helpers\Html
 {
+    protected static $bootstrapIcon3to5Map = [
+        'remove' => 'x-lg',
+        'plus' => 'plus-lg',
+        'move' => 'arrows-move',
+        'remove-sign' => 'exclamation-circle',
+        'info-sign' => 'info-circle',
+        'question-sign' => 'question-circle',
+        'ok' => 'check-circle',
+    ];
+
     /**
      * Generates a summary of the validation errors.
      * If there is no validation error, an empty error summary markup will still be generated, but it will be hidden.
@@ -28,7 +42,7 @@ class Html extends \yii\helpers\Html
      */
     public static function errorSummary($models, $options = [])
     {
-        $header = isset($options['header']) ? $options['header'] : '<p>' . Yii::t('yii', 'Please fix the following errors:') . '</p>';
+        $header = isset($options['header']) ? $options['header'] : '<p>' . Lang::t('yii', 'Please fix the following errors:') . '</p>';
         $footer = ArrayHelper::remove($options, 'footer', '');
         $encode = ArrayHelper::remove($options, 'encode', true);
         $showAllErrors = ArrayHelper::remove($options, 'showAllErrors', false);
@@ -85,5 +99,35 @@ class Html extends \yii\helpers\Html
         }
 
         return $lines;
+    }
+
+    public static function icon($icon, $class = '')
+    {
+        if (5 == self::getBootstrapVersion()) {
+            $icon = self::$bootstrapIcon3to5Map[$icon] ?? $icon;
+            $attrs = ['class' => "bi bi-{$icon}"];
+            self::addCssClass($attrs, $class);
+            return Html::tag('i', '', $attrs);
+        }
+
+        return Bootstrap3Html::icon($icon);
+    }
+
+    public static function getSmallSize()
+    {
+        if (5 == self::getBootstrapVersion()) {
+            return 'sm';
+        }
+
+        return 'xs';
+    }
+
+    public static function getBootstrapVersion()
+    {
+        if (isset(Yii::$app->extensions['yiisoft/yii2-bootstrap5'])) {
+            return 5;
+        }
+
+        return 3;
     }
 }

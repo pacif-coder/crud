@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\helpers;
+namespace Crud\helpers;
 
 use yii\helpers\Inflector;
 
@@ -13,7 +13,14 @@ class ClassI18N
     {
         $pos = strrpos($class, '\\');
         if (false != $pos) {
-            $class = substr($class, 0, $pos) . '\\' . Inflector::camel2id(lcfirst(substr($class, $pos + 1)));
+            $part1 = substr($class, 0, $pos);
+            $part2 = substr($class, $pos + 1);
+
+            if (strtoupper($part2) != $part2) {
+                $part2 = Inflector::camel2id(lcfirst($part2));
+            }
+
+            $class = $part1 . '\\' . $part2;
         }
 
         return strtolower($class);

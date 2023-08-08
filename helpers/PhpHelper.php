@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\helpers;
+namespace Crud\helpers;
 
 /**
  *
@@ -38,6 +38,7 @@ class PhpHelper
             if ($withKey && $i !== $key) {
                 $str .= var_export($key, true) . ' => ';
             }
+
             $str .= ltrim(self::data2code($value, $oneLine, $pad, 1));
 
             $str .= ',';
@@ -47,7 +48,10 @@ class PhpHelper
         }
 
         if ($oneLine) {
-            $str = substr($str, 0, -2);
+            if (strlen($str) > 2) {
+                $str = substr($str, 0, -2);
+            }
+
             $str .= ']';
         } else {
             $str .= "{$intend}]";
