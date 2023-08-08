@@ -1,94 +1,95 @@
 <?php
-namespace app\modules\crud\widgets;
+namespace Crud\widgets;
 
 use Yii;
 use yii\helpers\Url;
+use yii\helpers\ArrayHelper;
 
-use app\modules\crud\helpers\ParentModel;
-use app\modules\crud\helpers\ClassI18N;
+use Crud\behaviors\BackUrlBehavior;
+use Crud\helpers\ClassI18N;
+use Crud\helpers\Lang;
+use Crud\helpers\ModelName;
+use Crud\helpers\ParentModel;
+use Crud\models\ModelWithParentInterface;
 
 /**
  *
  */
-class Breadcrumbs
+class Breadcrumbs extends \yii\base\BaseObject
 {
-    protected $parents;
+    public $withHome = true;
 
-    protected $breadcrumbs = [];
+    public $withBegin;
+
+    public $lastUrl;
+
+    public $removeBackUrl = true;
+
+    public $removeGridParam = true;
+
+    public $removeParams = [];
+
+    public $links = [];
 
     protected $urlParams;
 
-    public function createEditBreadcrumbs($model)
-    {
-        $parents = ParentModel::loadParents($model);
-
-        $parent = null;
-        if ($parents) {
-            $begin = reset($parents);
-            $this->modelData2breadcrumbs($begin, true);
-
-            $parent = end($parents);
-            $lastIndex = key($parents);
-            foreach ($parents as $i => $modelData) {
-                if ($lastIndex == $i) {
-                    break;
-                }
-
-                $this->modelData2breadcrumbs($modelData);
-            }
-
-            $parent = $modelData;
-        }
-
-        $modelClass = get_class($model);
-        $messageCategory = ClassI18N::class2messagesPath($modelClass);
-        $params = $parent? ['parentModelName' => $parent['name']] : [];
-        $linkText = Yii::t($messageCategory, 'List items', $params);
-
-        $urlParams = $this->initUrlParams();
-        $controller = Yii::$app->class2controller->getController($modelClass);
-        if ($controller) {
-            $urlParams[0] = "{$controller}/{$urlParams[0]}";
-        }
-
-        if ($parent) {
-            $urlParams['id'] = $parent['id'];
-        }
-
-        $this->breadcrumbs[] = [
-            'url' => Url::toRoute($urlParams),
-            'label' => $linkText,
-        ];
-
-        return $this->breadcrumbs;
-    }
-
     public function createIndexBreadcrumbs($model)
     {
-        $parents = ParentModel::loadParents($model);
+        return $this->_make($model, false);
+    }
+
+    public function createEditBreadcrumbs($model)
+    {
+        return $this->_make($model, true);
+    }
+
+    public function _make($model, $includeLast = true)
+    {
+        $parents = [];
+        if (is_a($model, ModelWithParentInterface::class)) {
+            $parents = ParentModel::loadParents($model);
+        }
+
+        if ($this->withBegin) {
+            $modelData = $this->model2data($model);
+            $url = $this->getUrlToModel($modelData, true);
+
+            $messageCategory = ClassI18N::class2messagesPath($modelData['class']);
+            $label = Lang::t($messageCategory, 'Top list items');
+
+            $this->addLink($url, $label);
+        }
 
         end($parents);
         $lastIndex = key($parents);
         foreach ($parents as $i => $modelData) {
-            if ($lastIndex == $i) {
-                //continue;
+            if ($lastIndex != $i) {
+                $this->modelData2breadcrumbs($modelData);
+                continue;
             }
 
-            $this->modelData2breadcrumbs($modelData);
+            if (!$includeLast) {
+                break;
+            }
+
+            if ($this->lastUrl) {
+                $this->addLink($this->lastUrl, $modelData['name']);
+            } else {
+                $this->modelData2breadcrumbs($modelData);
+            }
         }
 
-        return $this->breadcrumbs;
+        return $this->links;
     }
 
-    protected function modelData2breadcrumbs($modelData, $dropID = false)
+    public function modelData2breadcrumbs($modelData, $dropID = false)
     {
-        $messageCategory = ClassI18N::class2messagesPath($modelData['class']);
-        $params = [
-            'parentModelName' => $modelData['parentName'],
-            'nameAttribute' => $modelData['name'],
-        ];
-        $linkText = Yii::t($messageCategory, 'List items', $params);
+        $url = $this->getUrlToModel($modelData, $dropID);
+        $this->addLink($url, $modelData['name']);
+    }
 
+    public function getUrlToModel($modelData, $dropID = false, $params = [])
+    {
         $urlParams = $this->initUrlParams();
         if (!$dropID) {
             $urlParams['id'] = $modelData['id'];
@@ -96,14 +97,32 @@ class Breadcrumbs
             unset($urlParams['id']);
         }
 
-        $controller = Yii::$app->class2controller->getController($modelData['class']);
-        if ($controller) {
-            $urlParams[0] = "{$controller}/{$urlParams[0]}";
+        if (Yii::$app->has('class2controller')) {
+            $controller = Yii::$app->class2controller->getController($modelData['class']);
+            if ($controller) {
+                $urlParams[0] = "{$controller}/{$urlParams[0]}";
+            }
         }
 
-        $this->breadcrumbs[] = [
-            'url' => Url::toRoute($urlParams),
-            'label' => $linkText,
+        $urlParams = ArrayHelper::merge($urlParams, $params);
+
+        return Url::toRoute($urlParams);
+    }
+
+    public function addLink($url, $label)
+    {
+        $this->links[] = (object) [
+            'url' => $url,
+            'label' => $label,
+        ];
+    }
+
+    protected function model2data($model)
+    {
+        return [
+            'class' => get_class($model),
+            'name' => ModelName::getName($model),
+            'id' => $model->id,
         ];
     }
 
@@ -114,12 +133,21 @@ class Breadcrumbs
         }
 
         $urlParams = Yii::$app->request->get();
-        if (isset($urlParams['back-url'])) {
-            unset($urlParams['back-url']);
+
+        $removeParams = $this->removeParams;
+        if ($this->removeBackUrl) {
+            $removeParams[] = BackUrlBehavior::BACK_URL_PARAM;
         }
 
-        if (isset($urlParams['page'])) {
-            unset($urlParams['page']);
+        if ($this->removeGridParam) {
+            $removeParams[] = 'page';
+            $removeParams[] = 'sort';
+        }
+
+        foreach ($removeParams as $removeParam) {
+            if (isset($urlParams[$removeParam])) {
+                unset($urlParams[$removeParam]);
+            }
         }
 
         $urlParams[0] = 'index';
@@ -127,12 +155,8 @@ class Breadcrumbs
         return $this->urlParams = $urlParams;
     }
 
-    public function getLastName()
+    public function getBreadcrumbs()
     {
-        if (!$this->parents) {
-            return;
-        }
-
-        return end($this->parents)['name'];
+        return $this->links;
     }
 }
