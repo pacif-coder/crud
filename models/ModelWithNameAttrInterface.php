@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\models;
+namespace Crud\models;
 
 /**
  * 
