@@ -1,7 +1,7 @@
 <?php
-namespace app\modules\crud\controls;
+namespace Crud\controls;
 
-use yii\bootstrap\Html;
+use yii\helpers\Html;
 
 /**
  * Link as button

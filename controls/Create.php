@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\controls;
+namespace Crud\controls;
 
 /**
  * Button to add new object

@@ -1,12 +1,15 @@
 <?php
-namespace app\modules\crud\controls;
+namespace Crud\controls;
 
 use Yii;
-use yii\bootstrap\Html;
 use yii\helpers\Url;
 
-use app\modules\crud\behaviors\BackUrlBehavior;
-use app\modules\crud\helpers\ClassI18N;
+use yii\bootstrap\Html as Bootstrap3Html;
+
+use Crud\behaviors\BackUrlBehavior;
+use Crud\helpers\ClassI18N;
+use Crud\helpers\Lang;
+use Crud\helpers\Html;
 
 use ReflectionClass;
 
@@ -29,9 +32,9 @@ implements CopyMessageCategoryInterface
 
     public $icon = '';
 
-    public $baseClass = 'btn';
+    public $size = '';
 
-    public $sizeClass = '';
+    public $baseClass = 'btn';
 
     public $colorClass = 'btn-info';
 
@@ -52,6 +55,8 @@ implements CopyMessageCategoryInterface
     public $removeParams;
 
     public $backUrl;
+
+    public $backUrlHash;
 
     public $isShow = true;
 
@@ -76,7 +81,7 @@ implements CopyMessageCategoryInterface
         parent::init();
 
         if (!$this->defMessageCategory) {
-            $this->defMessageCategory = ClassI18N::class2messagesPath('app\modules\crud\controls\Button');
+            $this->defMessageCategory = ClassI18N::class2messagesPath('crud\controls\Button');
         }
     }
 
@@ -102,7 +107,7 @@ implements CopyMessageCategoryInterface
     public function t($str)
     {
         $category = static::$isUseDefMessageCategory? $this->defMessageCategory : $this->messageCategory;
-        return Yii::t($category, $str);
+        return Lang::t($category, $str);
     }
 
     public function getIcon()
@@ -112,6 +117,10 @@ implements CopyMessageCategoryInterface
 
     public function getLabel()
     {
+        if (false === $this->label) {
+            return null;
+        }
+
         if ($this->label) {
             return $this->label;
         }
@@ -158,7 +167,11 @@ implements CopyMessageCategoryInterface
         $attrs = $this->options;
         Html::addCssClass($attrs, $this->baseClass);
         Html::addCssClass($attrs, $this->colorClass);
-        Html::addCssClass($attrs, $this->sizeClass);
+
+        if ('small' == $this->size) {
+            $smallSize = Html::getSmallSize();
+            Html::addCssClass($attrs, "btn-{$smallSize}");
+        }
 
         $attrs['id'] = $this->getId();
 
@@ -184,8 +197,21 @@ implements CopyMessageCategoryInterface
             return;
         }
 
-        $get = Yii::$app->request->get();
+        $get = $this->processingGet();
 
+        $controller = $this->getController();
+        if ($controller) {
+            $get[0] = $controller . '/' . $this->action;
+        } else {
+            $get[0] = $this->action;
+        }
+
+        return Url::to($get);
+    }
+
+    protected function processingGet()
+    {
+        $get = Yii::$app->request->get();
         foreach ((array) $this->params as $param => $value) {
             $get[$param] = $value;
         }
@@ -196,18 +222,11 @@ implements CopyMessageCategoryInterface
             }
         }
 
-        $controller = $this->getController();
-        if ($controller) {
-            $get[0] = $controller . '/' . $this->action;
-        } else {
-            $get[0] = $this->action;
-        }
-
         if ($this->backUrl) {
-            $get = BackUrlBehavior::addBackUrl($get);
+            $get = BackUrlBehavior::addBackUrl($get, $this->backUrlHash);
         }
 
-        return Url::to($get);
+        return $get;
     }
 
     protected function getController()
@@ -216,7 +235,7 @@ implements CopyMessageCategoryInterface
             return $this->controller;
         }
 
-        if ($this->modelClass) {
+        if ($this->modelClass && Yii::$app->has('class2controller')) {
             return Yii::$app->class2controller->getController($this->modelClass);
         }
     }
