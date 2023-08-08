@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\builder;
+namespace Crud\builder;
 
 use Yii;
 use yii\base\Event;
@@ -8,16 +8,18 @@ use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 use yii\validators\ExistValidator;
 
-use app\modules\crud\builder\Base;
-use app\modules\crud\grid\column\ActionLinkColumn;
-use app\modules\crud\grid\column\DragIconColumn;
-use app\modules\crud\grid\GridView;
-use app\modules\crud\grid\MatrixGridView;
-use app\modules\crud\grid\FilterModel;
-use app\modules\crud\helpers\ModelName;
-use app\modules\crud\helpers\ParentModel;
-use app\modules\crud\models\ModelWithParentInterface;
-use app\modules\crud\models\ModelWithOrderInterface;
+use Crud\builder\Base;
+use Crud\grid\column\ActionLinkColumn;
+use Crud\grid\column\DataColumn;
+use Crud\grid\column\DragIconColumn;
+use Crud\grid\FilterModel;
+use Crud\grid\GridView;
+use Crud\grid\MatrixGridView;
+use Crud\grid\Sort;
+use Crud\helpers\ModelName;
+use Crud\helpers\ParentModel;
+use Crud\models\ModelWithParentInterface;
+use Crud\models\ModelWithOrderInterface;
 
 /**
  * XXX
@@ -107,6 +109,8 @@ class GridBuilder extends Base
     protected $_model;
     protected $_transformSortAttrMap = [];
     protected $_transformFilterAttrMap = [];
+    protected $_backupLinkQueryIDAttr = [];
+
     protected $_isChangeGridOption = false;
 
     protected $_joinWithModels = [];
@@ -131,6 +135,7 @@ class GridBuilder extends Base
 
         $this->_isExtraControlCreated = false;
         $this->_transformSortAttrMap = $this->_transformFilterAttrMap = [];
+        $this->_backupLinkQueryIDAttr = [];
 
         if ($modelClass && $modelClass != $this->modelClass) {
             $this->setModelClass($modelClass);
@@ -141,7 +146,6 @@ class GridBuilder extends Base
         }
 
         $this->beforeBuild();
-        $this->initNameAttr();
 
         if (!$this->gridType) {
             $this->gridType = self::TYPE_DEFAULT;
@@ -349,11 +353,15 @@ class GridBuilder extends Base
         if ($this->dragable) {
             $options['sort'] = false;
         } else {
+            if (!isset($options['sort']['class'])) {
+                $options['sort']['class'] = Sort::class;
+            }
+
             $defaultOrder = null;
             if (null !== $this->defaultOrder) {
                 $defaultOrder = $this->defaultOrder;
-            } elseif ($this->nameAttr) {
-                $defaultOrder = [$this->nameAttr => SORT_ASC];
+            } elseif (($nameAttr = ModelName::getNameAttr($this->modelClass))) {
+                $defaultOrder = [$nameAttr => SORT_ASC];
             }
 
             if (null !== $defaultOrder) {
@@ -437,6 +445,8 @@ class GridBuilder extends Base
             $this->gridOptions['filterModel'] = $this->filterModel;
         }
 
+        $this->gridOptions['renamedLink2ModelAttr'] = $this->_backupLinkQueryIDAttr;
+
         return $this->gridOptions;
     }
 
@@ -452,7 +462,7 @@ class GridBuilder extends Base
 
         $modelClass = $this->modelClass;
         $table = $modelClass::tableName();
-        $this->query = $modelClass::find();
+        $this->query = $modelClass::find()->asArray();
 
         $parentModelAttr = ParentModel::getParentModelAttr($modelClass);
         if ($parentModelAttr) {
@@ -461,7 +471,7 @@ class GridBuilder extends Base
         }
 
         if ($this->dragable) {
-            $this->query->orderBy([$this->modelClass::ORDER_ATTR => SORT_ASC]);
+            $this->query->orderBy([$modelClass::ORDER_ATTR => SORT_ASC]);
         }
 
         if (!$this->query->select) {
@@ -563,6 +573,10 @@ class GridBuilder extends Base
         if (!$query->select) {
             $query->addSelect("[[{$table}]].*");
         }
+
+        $linkQueryIDAttr = '_lq_' . self::$_autoJoinI++;
+        $this->_backupLinkQueryIDAttr[$attr] = $linkQueryIDAttr;
+        $query->addSelect("[[{$table}]].[[{$attr}]] as [[{$linkQueryIDAttr}]]");
 
         $query->addSelect("[[{$joinToTable}]].[[{$nameAttr}]] as [[{$attr}]]");
         $this->_transformSortAttrMap[$attr] = "[[{$joinToTable}]].[[{$nameAttr}]]";
@@ -702,19 +716,12 @@ class GridBuilder extends Base
 
     protected function makeGridEditLink()
     {
-        $targetColumn = null;
-        $nameAttr = $this->nameAttr;
-        if (null === $this->nameAttr) {
-            $keys = $this->modelClass::primaryKey();
-            if (1 == count($keys)) {
-                $nameAttr = current($keys);
-            }
-        }
-
+        $nameAttr = ModelName::getNameAttr($this->modelClass);
         if (null === $nameAttr) {
             return;
         }
 
+        $targetColumn = null;
         foreach ($this->columns as $column => $desc) {
             $attr = isset($desc['attribute'])? $desc['attribute'] : null;
             if (null === $attr) {
@@ -773,13 +780,16 @@ class GridBuilder extends Base
         foreach ($columns as $column => $desc) {
             if (is_string($desc)) {
                 $desc = $this->parseColumnDesc($desc);
-                $result[$desc['attribute']] = $desc;
+                $column = $desc['attribute'];
             } elseif (!isset($desc['attribute']) && !is_int($column)) {
                 $desc['attribute'] = $column;
-                $result[$column] = $desc;
-            } else {
-                $result[$column] = $desc;
             }
+
+            if (!array_key_exists('label', $desc) && isset($desc['attribute']) && $desc['attribute']) {
+                $desc['label'] = $this->_createTmpModel()->getAttributeLabel($desc['attribute']);
+            }
+
+            $result[$column] = $desc;
         }
 
         return $result;
