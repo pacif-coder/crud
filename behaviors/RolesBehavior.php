@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\behaviors;
+namespace Crud\behaviors;
 
 use Yii;
 use yii\db\ActiveRecord;

@@ -1,5 +1,5 @@
 <?php
-namespace app\modules\crud\behaviors\viaTable;
+namespace Crud\behaviors\viaTable;
 
 /**
  *

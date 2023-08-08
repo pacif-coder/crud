@@ -1,9 +1,9 @@
 <?php
-namespace app\modules\crud\behaviors;
+namespace Crud\behaviors;
 
 use yii\db\ActiveRecord;
 
-use app\modules\crud\behaviors\viaTable\LinkModel;
+use Crud\behaviors\viaTable\LinkModel;
 
 use Exception;
 
@@ -117,6 +117,11 @@ class ViaTableBehavior extends \yii\base\Behavior
     {
         // for safe
         $this->initDesc();
+
+        // not set attr value - skip validation
+        if (!isset($this->new[$attr])) {
+            return true;
+        }
 
         $query = $this->querys[$attr];
         $possibleIds = $query->asArray()->select($this->idAttr[$attr])->column();
