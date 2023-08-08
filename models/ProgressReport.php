@@ -1,15 +1,16 @@
 <?php
-namespace app\modules\crud\models;
+namespace Crud\models;
 
 use Yii;
 use yii\helpers\Url;
 use yii\helpers\Html;
 
-use app\modules\crud\helpers\ClassI18N;
-use app\modules\crud\widgets\ProgressBar;
-use app\modules\crud\builder\FormBuilder;
+use Crud\helpers\ClassI18N;
+use Crud\helpers\Lang;
+use Crud\widgets\ProgressBar;
+use Crud\builder\FormBuilder;
 
-use app\modules\crud\controls\Link;
+use Crud\controls\Link;
 
 /**
  *
@@ -96,7 +97,7 @@ class ProgressReport extends \yii\base\Model
 
         $list = [];
         foreach ($this->attributes() as $attribute) {
-            $list[$attribute] = Yii::t($file, $attribute);
+            $list[$attribute] = Lang::t($file, $attribute);
         }
 
         return $list;
