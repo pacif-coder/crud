@@ -3,6 +3,7 @@ namespace Crud\helpers;
 
 use Yii;
 use Crud\i18n\PhpMessageSource;
+use Crud\helpers\ClassI18N;
 
 use Exception;
 
@@ -15,6 +16,8 @@ class Lang
 
     public static function t($category, $message, $params = [], $language = null)
     {
+        $category = self::_category($category);
+
         if (is_array($category)) {
             $stabTMessage = self::_stab($message, $params);
 
@@ -24,7 +27,7 @@ class Lang
                     return $tMessage;
                 }
             }
-            
+
             return $tMessage;
         }
 
@@ -61,7 +64,7 @@ class Lang
         return false;
     }
 
-    public static function addCategory2Path($category, $messageDir)
+    public static function addCategory2Path($category, $messageDir, $cutCategoryPrefix = true)
     {
         if (!file_exists($messageDir) || !is_dir($messageDir)) {
             throw new Exception("File path '{$messageDir}' is not exist or not directory");
@@ -69,11 +72,16 @@ class Lang
 
         $category = trim(strtolower($category), '\\');
 
-        Yii::$app->i18n->translations[$category . '\\*'] = [
+        $translation = [
             'class' => PhpMessageSource::class,
             'basePath' => $messageDir,
-            'categoryPrefix' => $category,
         ];
+
+        if ($cutCategoryPrefix) {
+            $translation['categoryPrefix'] = $category;
+        }
+
+        Yii::$app->i18n->translations[$category . '\\*'] = $translation;
 
         uksort(Yii::$app->i18n->translations, [self::class, '_cmpLen']);
     }
@@ -91,5 +99,15 @@ class Lang
         }
 
         return ($placeholders === []) ? $message : strtr($message, $placeholders);
+    }
+
+    protected static function _category($category)
+    {
+        if (!is_object($category)) {
+            return $category;
+        }
+
+        $class = get_class($category);
+        return ClassI18N::class2messagesPath($class);
     }
 }
