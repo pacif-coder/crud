@@ -23,6 +23,18 @@ class Html extends \yii\helpers\Html
         'ok' => 'check-circle',
     ];
 
+    public static function getBootstrapClass($name)
+    {
+        $v = self::getBootstrapVersion();
+        switch ($v) {
+            case 3:
+                return "yii\bootstrap\\{$name}";
+
+            default:
+                return "yii\bootstrap{$v}\\{$name}";
+        }
+    }
+
     /**
      * Generates a summary of the validation errors.
      * If there is no validation error, an empty error summary markup will still be generated, but it will be hidden.

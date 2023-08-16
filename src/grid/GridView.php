@@ -7,6 +7,7 @@ use yii\widgets\BaseListView;
 
 use Crud\grid\column\CheckboxColumn;
 use Crud\grid\column\DataColumn;
+use Crud\helpers\Html;
 
 use Crud\controls\CopyMessageCategoryInterface;
 
@@ -38,6 +39,15 @@ implements CopyMessageCategoryInterface
     public $dragableOptions = [];
 
     public $renamedLink2ModelAttr = [];
+
+    public function init()
+    {
+        parent::init();
+
+        if (is_array($this->pager) && !isset($this->pager['class'])) {
+            $this->pager['class'] = Html::getBootstrapClass('LinkPager');
+        }
+    }
 
     protected function initColumns()
     {
