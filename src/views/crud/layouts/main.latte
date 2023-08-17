@@ -37,6 +37,14 @@
                     {/foreach}
                 </ul>
             </div>
+
+            {block header/logout}
+                <div class="navbar-text">
+                    <a href="{Url::to(['site/logout'])}" title="Выйти">
+                        <span class="bi bi-box-arrow-in-right h5"></span>
+                    </a>
+                </div>
+            {/block}
         </div>
     </nav>
 </header>
