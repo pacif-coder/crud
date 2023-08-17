@@ -69,6 +69,10 @@ class FilterModel extends DynamicModel {
                 $indexed = array_merge($indexed, $indexes->columnNames);
             }
 
+            foreach($modelClass::getDb()->getSchema()->getTableForeignKeys($table) as $indexes) {
+                $indexed = array_merge($indexed, $indexes->columnNames);
+            }
+
             $filterAttrs = array_intersect($filterAttrs, $indexed);
         }
 
