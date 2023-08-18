@@ -116,4 +116,29 @@ implements CopyMessageCategoryInterface
     {
         return $this->surroundForm(parent::renderTableBody());
     }
+
+    /**
+     * Renders a table row with the given data model and key.
+     * @param mixed $model the data model to be rendered
+     * @param mixed $key the key associated with the data model
+     * @param int $index the zero-based index of the data model among the model array returned by [[dataProvider]].
+     * @return string the rendering result
+     */
+    public function renderTableRow($model, $key, $index)
+    {
+        $cells = [];
+        /* @var $column Column */
+        foreach ($this->columns as $column) {
+            $cells[] = $column->renderDataCell($model, $key, $index);
+        }
+
+        if (is_callable($this->rowOptions) || $this->rowOptions instanceof Closure) {
+            $options = call_user_func($this->rowOptions, $model, $key, $index, $this);
+        } else {
+            $options = $this->rowOptions;
+        }
+        $options['data-key'] = is_array($key) ? json_encode($key) : (string) $key;
+
+        return Html::tag('tr', implode('', $cells), $options);
+    }
 }
