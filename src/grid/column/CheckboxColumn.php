@@ -4,6 +4,8 @@ namespace Crud\grid\column;
 use yii\helpers\Html;
 use yii\helpers\Json;
 
+use Closure;
+
 /**
  *
  */
@@ -16,7 +18,7 @@ class CheckboxColumn extends \yii\grid\CheckboxColumn
     public $checkboxOptions = ['data-role' => 'checkbox-column'];
 
     protected function renderDataCellContent($model, $key, $index) {
-        if ($this->checkboxOptions instanceof Closure) {
+        if (is_callable($this->checkboxOptions) || $this->checkboxOptions instanceof Closure) {
             $options = call_user_func($this->checkboxOptions, $model, $key, $index, $this);
         } else {
             $options = $this->checkboxOptions;
