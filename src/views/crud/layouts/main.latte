@@ -28,7 +28,7 @@
                 <a href="/">Logo</a>
             {/block}
 
-            <div class="collapse navbar-collapse justify-content-end" id="navbarCollapse">
+            <div class="collapse navbar-collapse justify-content-end" id="navbarCollapse" n:if="$context->topMenu">
                 <ul class="navbar-nav">
                     {foreach $context->topMenu as $name => $link}
                     <li class="nav-item">
@@ -39,9 +39,11 @@
             </div>
 
             {block header/logout}
-                <div class="navbar-text">
-                    <a href="{Url::to(['site/logout'])}" title="Выйти">
-                        <span class="bi bi-box-arrow-in-right h5"></span>
+                <div n:if="!$app->user->isGuest">
+                    <a class="text-decoration-none" title="Выйти"
+                       href="{Url::to(['site/logout'])}">
+                      Выйти
+                      <span class="bi bi-box-arrow-right"></span>
                     </a>
                 </div>
             {/block}
