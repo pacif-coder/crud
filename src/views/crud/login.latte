@@ -1,5 +1,7 @@
 {layout 'layouts/main.latte'}
 
+{import 'include/common-changes.latte'}
+
 {block loader}{/block}
 
 {block main}
@@ -11,16 +13,21 @@
         </div>
         <div class="card-body">
             {Html::beginForm('', 'post')|noescape}
-                {Html::errorSummary($loginForm, ['showAllErrors' => true, 'header' => false, 'class' => 'alert alert-danger error-summary'])|noescape}
+                {Html::errorSummary($loginForm, ['showAllErrors' => true, 'header' => false,
+                       'class' => 'alert alert-danger error-summary'])|noescape}
                 <div class="mb-3 form-floating">
-                    {Html::activeTextInput($loginForm, 'username', ['class' => 'form-control', 'placeholder' => $loginForm->getAttributeLabel('username')])|noescape}
+                    {Html::activeTextInput($loginForm, 'username', ['class' => 'form-control',
+                           'placeholder' => $loginForm->getAttributeLabel('username')])|noescape}
                     {Html::activeLabel($loginForm, 'username')|noescape}
                 </div>
                 <div class="mb-3 form-floating">
-                    {Html::activePasswordInput($loginForm, 'password', ['class' => 'form-control', 'placeholder' => $loginForm->getAttributeLabel('password')])|noescape}
+                    {Html::activePasswordInput($loginForm, 'password', ['class' => 'form-control',
+                           'placeholder' => $loginForm->getAttributeLabel('password')])|noescape}
                     {Html::activeLabel($loginForm, 'password')|noescape}
                 </div>
-                <button type="submit" class="btn btn-success w-100">{$loginForm->getAttributeLabel('loginSubmit')}</button>
+                <button type="submit" class="btn btn-success w-100">
+                    {$loginForm->getAttributeLabel('loginSubmit')}
+                </button>
             {Html::endForm()|noescape}
         </div>
     </main>

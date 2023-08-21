@@ -1,5 +1,7 @@
 {layout 'layouts/main.latte'}
 
+{import 'include/common-changes.latte'}
+
 {block main/content/center}
 {php
     $grid = $builder->gridClass::begin($builder->getOptions());
