@@ -12,8 +12,8 @@
     {/block}
 
     {block main/title/h1}
-        <h1 n:if="$title">
-            {quotPair2span($title, 'with-quota text-success text-opacity-75')|noescape}
+        <h1 n:if="isset($view) && $view->title">
+            {TitleHelper::quotPair2span($view->title, 'with-quota text-success text-opacity-75')|noescape}
         </h1>
     {/block}
 </div>

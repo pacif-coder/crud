@@ -23,11 +23,6 @@ class CrudTemplateParameters extends \yii\base\BaseObject
     public $builder;
 
     /**
-     * @var string
-     */
-    public $title;
-
-    /**
      * @var object
      */
     public $breadcrumbs;
@@ -46,17 +41,4 @@ class CrudTemplateParameters extends \yii\base\BaseObject
      * @var
      */
     public $app;
-
-    /** @function */
-    public function quotPair2span($str, $class = 'with-quota')
-    {
-        $attrs = ['class' => $class];
-        if (false !== strpos($str, '«') or false !== strpos($str, '»')) {
-            $attrs['class'] = null;
-        }
-
-        $str = str_replace("'", '"', $str);
-        $template = Html::tag('span', '$1', $attrs);
-        return preg_replace('/&quot;+(.*?)&quot;/s', $template,  Html::encode($str));
-    }
 }

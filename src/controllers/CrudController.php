@@ -359,13 +359,4 @@ abstract class CrudController extends BaseController
     {
         return $this->request->get('id');
     }
-
-    protected function setTitle($title)
-    {
-        parent::setTitle($title);
-
-        if ($this->templateParams) {
-            $this->templateParams->title = $title;
-        }
-    }
 }
