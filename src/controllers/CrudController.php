@@ -11,6 +11,7 @@ use Crud\latte\LatteRenderer;
 use Crud\helpers\ClassI18N;
 use Crud\helpers\ParentModel;
 use Crud\helpers\ModelName;
+use Crud\helpers\TitleHelper;
 use Crud\models\ModelWithParentInterface;
 
 use ReflectionClass;
@@ -34,6 +35,12 @@ abstract class CrudController extends BaseController
 
     protected $titleParams = [];
 
+    protected $globalUseClass = [];
+
+    protected $defaultGlobalUseClass = [
+        TitleHelper::class => 'TitleHelper',
+    ];
+
     public function init()
     {
         if (!$this->modelClass) {
@@ -53,14 +60,32 @@ abstract class CrudController extends BaseController
         $this->layout = false;
 
         $this->fillTemplateFindPaths();
+        
+        $this->fillTemplateGlobalUseClass();
+
         $this->mapFakeTheme();
 
         $this->templateParams = Yii::createObject(CrudTemplateParameters::class);
     }
 
+    protected function fillTemplateGlobalUseClass()
+    {
+        $view = $this->getView();
+        if (!isset($view->renderers['latte'])) {
+            return;
+        }
+
+        $globalUse = array_merge($this->defaultGlobalUseClass, $this->globalUseClass);
+        $view->renderers['latte']['globalUseClass'] = $globalUse;
+    }
+
     protected function fillTemplateFindPaths()
     {
         $view = $this->getView();
+        if (!isset($view->renderers['latte'])) {
+            return;
+        }
+
         $view->renderers['latte']['class'] = LatteRenderer::class;
         $view->renderers['latte']['options']['templateDirs'] = $this->getTemplateFindPaths();
     }
