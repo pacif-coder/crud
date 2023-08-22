@@ -11,19 +11,19 @@ class Bootstrap5Asset extends \yii\web\AssetBundle
     /**
      * @inheritDoc
      */
-    public $sourcePath = '@bower/bootstrap/dist';
+    public $sourcePath = '@bower/bootstrap';
 
     /**
      * @inheritDoc
      */
     public $css = [
-        'css/bootstrap.min.css'
+        'dist/css/bootstrap.min.css'
     ];
 
     /**
      * @inheritDoc
      */
     public $js = [
-        'js/bootstrap.bundle.min.js'
+        'dist/js/bootstrap.bundle.min.js'
     ];
 }
