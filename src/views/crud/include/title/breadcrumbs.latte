@@ -1,4 +1,4 @@
-<nav aria-label="breadcrumb" n:if="$breadcrumbs->links" class="small">
+<nav aria-label="breadcrumb" n:if="isset($breadcrumbs) && $breadcrumbs->links" class="small">
     <ol class="breadcrumb">
         {foreach $breadcrumbs->links as $item}
             <li class="breadcrumb-item">
