@@ -20,6 +20,9 @@
             }
         }
     }
+}
+
+.grid-view {
 
     .table {
         margin-bottom: 0;
@@ -52,7 +55,7 @@
                 & > td, & > th {
                     padding: 4px;
 
-                    .form-control {
+                    input.form-control {
                         padding-left: 4px;
                         padding-right: 4px;
                         height: 28px;
@@ -86,9 +89,7 @@
             margin-bottom: 5px;
         }
     }
-}
 
-.grid-view {
     @for $i from 1 through 40 {
         .column-width-#{$i * 10} {width: #{$i * 10}px;}
     }
