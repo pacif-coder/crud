@@ -62,6 +62,8 @@ abstract class BaseController extends \yii\web\Controller
         FormBuilder::EVENT_AFTER_BUILD => 'afterFormBuild',
     ];
 
+    protected $action2title = [];
+
     public function behaviors()
     {
         $behaviors = parent::behaviors();
@@ -88,6 +90,20 @@ abstract class BaseController extends \yii\web\Controller
         }
 
         $this->registerTranslations();
+    }
+
+    public function beforeAction($action): bool
+    {
+        $r = parent::beforeAction($action);
+        if (!$r) {
+            return $r;
+        }
+
+        if (isset($this->action2title[$action->id])) {
+            $this->setTitle($this->action2title[$action->id]);
+        }
+
+        return $r;
     }
 
     public function registerTranslations()
