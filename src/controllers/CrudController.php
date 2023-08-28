@@ -2,6 +2,7 @@
 namespace Crud\controllers;
 
 use Yii;
+use yii\helpers\Url;
 use yii\base\InvalidConfigException;
 use yii\base\Theme;
 use yii\web\NotFoundHttpException;
@@ -12,6 +13,7 @@ use Crud\helpers\ClassI18N;
 use Crud\helpers\ParentModel;
 use Crud\helpers\ModelName;
 use Crud\helpers\TitleHelper;
+use Crud\helpers\Html;
 use Crud\models\ModelWithParentInterface;
 
 use ReflectionClass;
@@ -39,6 +41,8 @@ abstract class CrudController extends BaseController
 
     protected $defaultGlobalUseClass = [
         TitleHelper::class => 'TitleHelper',
+        Html::class,
+        Url::class,
     ];
 
     public function init()
@@ -60,7 +64,7 @@ abstract class CrudController extends BaseController
         $this->layout = false;
 
         $this->fillTemplateFindPaths();
-        
+
         $this->fillTemplateGlobalUseClass();
 
         $this->mapFakeTheme();
@@ -75,7 +79,14 @@ abstract class CrudController extends BaseController
             return;
         }
 
-        $globalUse = array_merge($this->defaultGlobalUseClass, $this->globalUseClass);
+        $globalUse = [];
+        $merged = array_merge($this->defaultGlobalUseClass, $this->globalUseClass);
+        foreach ($merged as $key => $name) {
+            if (!is_int($key) || !in_array($name, $globalUse)) {
+                $globalUse[$key] = $name;
+            }
+        }
+
         $view->renderers['latte']['globalUseClass'] = $globalUse;
     }
 
