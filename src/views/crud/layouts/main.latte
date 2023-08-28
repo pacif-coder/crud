@@ -28,24 +28,52 @@
                 <a href="/">Logo</a>
             {/block}
 
-            <div class="collapse navbar-collapse justify-content-end" id="navbarCollapse" n:if="$context->topMenu">
+            {block header/topMenu}
+            {var $topMenu = $context->getTopMenu()}
+            <div class="top-menu collapse navbar-collapse justify-content-end" id="navbarCollapse" n:if="$topMenu">
                 <ul class="navbar-nav">
-                    {foreach $context->topMenu as $name => $link}
-                    <li class="nav-item">
-                        <a class="nav-link " aria-current="page" href="{$link}">{$name}</a>
-                    </li>
+                    {foreach $topMenu as $name => $link}
+                        <li class="nav-item">
+                            <a class="nav-link link-primary" href="{$link}">{$name}</a>
+                        </li>
                     {/foreach}
                 </ul>
             </div>
 
+            {/block}
+
+            {block header/avatar}
+            {/block}
+
             {block header/logout}
-                <div n:if="!$app->user->isGuest">
-                    <a class="text-decoration-none" title="Выйти"
-                       href="{Url::to(['site/logout'])}">
-                      Выйти
-                      <span class="bi bi-box-arrow-right"></span>
-                    </a>
-                </div>
+                {if $app->user->identity}
+                    <div class="navbar-text border-start border-secondary"></div>
+
+                    <div class="navbar-text mx-2">
+                        <a class="text-decoration-none link-primary" title="Выйти"
+                           href="/logout">Выйти</a>
+                    </div>
+                    <div class="navbar-text me-1">
+                        <a class="bi bi-box-arrow-right h3 text-danger"
+                           href="/logout"></a>
+                    </div>
+                {/if}
+            {/block}
+
+            {block header/login}
+                {if $app->user->isGuest}
+                    <div class="navbar-text border-start border-secondary"></div>
+
+                    {var $loginUrl = Url::to($app->user->loginUrl)}
+                    <div class="navbar-text mx-2">
+                        <a class="text-decoration-none link-primary" title="Войти"
+                           href="{$loginUrl}">Войти</a>
+                    </div>
+                    <div class="navbar-text me-1">
+                        <a class="bi bi-box-arrow-in-right h3 text-danger"
+                           href="{$loginUrl}"></a>
+                    </div>
+                {/if}
             {/block}
         </div>
     </nav>
