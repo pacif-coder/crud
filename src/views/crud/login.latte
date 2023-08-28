@@ -2,8 +2,6 @@
 
 {import 'include/common-changes.latte'}
 
-{block loader}{/block}
-
 {block main}
 <div class="container d-flex w-100 h-100 mx-auto flex-column">
 
@@ -12,7 +10,7 @@
             {$loginForm->getAttributeLabel('loginSubmit')}
         </div>
         <div class="card-body">
-            {Html::beginForm('', 'post')|noescape}
+            {Html::beginForm($loginForm->getAction(), 'post')|noescape}
                 {Html::errorSummary($loginForm, ['showAllErrors' => true, 'header' => false,
                        'class' => 'alert alert-danger error-summary'])|noescape}
                 <div class="mb-3 form-floating">
