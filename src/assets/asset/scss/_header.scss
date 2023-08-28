@@ -1,0 +1,16 @@
+header {
+    .top-menu {
+    }
+
+    .navbar {
+        padding: 0;
+    }
+
+    .dropdown-menu {
+        border-radius: 0;
+    }
+
+    .logout {
+        padding-left: var(--bs-navbar-nav-link-padding-x);
+    }
+}
