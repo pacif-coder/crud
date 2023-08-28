@@ -46,6 +46,11 @@ class BackUrlBehavior extends Behavior
             return $url;
         }
 
+        $returnUrl = Yii::$app->user->returnUrl;
+        if ($returnUrl) {
+            return $returnUrl;
+        }
+
         $url = $this->getHostInfo() . Yii::$app->request->getUrl();
         $referer = Yii::$app->request->headers->get('referer');
         if (null !== $referer) {
@@ -127,8 +132,8 @@ class BackUrlBehavior extends Behavior
     public function events()
     {
         return [
-            Controller::EVENT_AFTER_ACTION => 'saveUrl',
             Controller::EVENT_BEFORE_ACTION => 'setReturnUrl',
+            Controller::EVENT_AFTER_ACTION => 'saveUrl',
         ];
     }
 
@@ -136,7 +141,7 @@ class BackUrlBehavior extends Behavior
     {
         $url = $this->getBackUrl();
         if (null !== $url) {
-            Yii::$app->getUser()->setReturnUrl($url);
+            Yii::$app->user->setReturnUrl($url);
         }
     }
 
