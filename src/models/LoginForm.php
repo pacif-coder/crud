@@ -2,10 +2,10 @@
 namespace Crud\models;
 
 use Yii;
+use yii\helpers\Url;
 
 use Crud\helpers\Lang;
-
-use app\models\User;
+use Crud\behaviors\BackUrlBehavior;
 
 /**
  * LoginForm is the model behind the login form.
@@ -20,9 +20,30 @@ class LoginForm extends \yii\base\Model
 
     public $rememberMe = true;
 
-    public $userClass = User::class;
+    public $userIdentityClass;
+
+    public $addBackUrl = true;
 
     protected $user = false;
+
+    public function behaviors(): array
+    {
+        // event in BackUrlBehavior not triggered on model event
+        // use only for method 'getBackUrl'
+        $behaviors = parent::behaviors();
+        $behaviors['backUrl'] = BackUrlBehavior::class;
+
+        return $behaviors;
+    }
+
+    public function init()
+    {
+        if (!$this->userIdentityClass) {
+            $this->userIdentityClass = Yii::$app->user->identityClass;
+        }
+
+        parent::init();
+    }
 
     /**
      * @return array the validation rules.
@@ -50,11 +71,21 @@ class LoginForm extends \yii\base\Model
             return;
         }
 
+        $error = Lang::t($this, 'Incorrect username or password');
         $user = $this->getUser();
-        if (!$user || !$user->validatePassword($this->password)) {
-            $error = Lang::t($this, 'Incorrect username or password');
+        if (!$user) {
             $this->addError($attribute, $error);
+            return;
         }
+
+        if ($user->validatePassword($this->password)) {
+            return;
+        }
+
+        if ($user->hasErrors()) {
+            $error = implode("\n", $user->getErrorSummary(true));
+        }
+        $this->addError($attribute, $error);
     }
 
     /**
@@ -70,6 +101,16 @@ class LoginForm extends \yii\base\Model
         return Yii::$app->user->login($this->getUser(), $this->rememberMe ? 3600 * 24 * 30 : 0);
     }
 
+    public function getAction()
+    {
+        $params = [''];
+        if ($this->addBackUrl) {
+            $params[BackUrlBehavior::BACK_URL_PARAM] = $this->getBackUrl();
+        }
+
+        return Url::to($params);
+    }
+
     /**
      * Finds user by [[username]]
      *
@@ -81,7 +122,8 @@ class LoginForm extends \yii\base\Model
             return $this->user;
         }
 
-        return $this->user = $this->userClass::findByUsername($this->username);
+        $сlass = $this->userIdentityClass;
+        return $this->user = $сlass::findByUsername($this->username);
     }
 
     public function attributeLabels()
