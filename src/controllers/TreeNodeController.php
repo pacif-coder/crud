@@ -16,12 +16,6 @@ use Crud\widgets\TreeMenu;
  */
 class TreeNodeController extends CrudController
 {
-    public $modelClass;
-
-    public $assets = [
-        CmsAsset::class,
-    ];
-
     public $hasTreeMenu = true;
 
     protected $createTypeCode;
