@@ -2,7 +2,7 @@
     {include 'title/breadcrumbs.latte'}
 {/block}
 
-<div class="main-title">
+<div class="main-title" n:if="isset($view) && $view->title">
     {block main/title/buttons}
         {if isset($builder) && $builder->isExtraControlExist('title')}
             <div class="buttons-right">
