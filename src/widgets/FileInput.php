@@ -69,6 +69,6 @@ class FileInput extends InputWidget
             $str = $fileInput . $trash;
         }
 
-        echo Html::tag('div', $str, ['data-role' => 'widget-file-input', 'class' => 'widget-file-input']);
+        return Html::tag('div', $str, ['data-role' => 'widget-file-input', 'class' => 'widget-file-input']);
     }
 }

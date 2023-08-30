@@ -19,7 +19,7 @@ class PathInput extends \yii\widgets\InputWidget
 
         $str .= Html::endTag('div');
 
-        echo $str;
+        return $str;
     }
 
     public function calcParentPath()
