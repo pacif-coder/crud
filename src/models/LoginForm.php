@@ -3,6 +3,7 @@ namespace Crud\models;
 
 use Yii;
 use yii\helpers\Url;
+use yii\base\Model;
 
 use Crud\helpers\Lang;
 use Crud\behaviors\BackUrlBehavior;
@@ -12,7 +13,7 @@ use Crud\behaviors\BackUrlBehavior;
  *
  * @property-read User|null $user
  */
-class LoginForm extends \yii\base\Model
+class LoginForm extends Model
 {
     public $username;
 
@@ -82,7 +83,7 @@ class LoginForm extends \yii\base\Model
             return;
         }
 
-        if ($user->hasErrors()) {
+        if ($user instanceof Model && $user->hasErrors()) {
             $error = implode("\n", $user->getErrorSummary(true));
         }
         $this->addError($attribute, $error);
