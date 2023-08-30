@@ -13,39 +13,31 @@ use yii\helpers\FileHelper;
  */
 class GridView2Spreadsheet extends \yii\grid\GridView
 {
-    public $spreadsheet;
-
-    public $sheet;
-
     public $convertFormat = [
         'text' => 'raw',
         'ntext' => 'raw',
     ];
 
+    protected $_spreadsheet;
+
+    protected $_sheet;
+
     /**
-     * Runs the widget.
+     * Save data to path
      */
     public function save($path)
     {
-        if (!$this->spreadsheet) {
-            $this->spreadsheet = new Spreadsheet();
-        }
-
-        if (!$this->sheet) {
-            $this->sheet = $this->spreadsheet->getActiveSheet();
-        }
-
         // задаем имя листа
 //        $this->sheet->setTitle('Мой лист');
 
         $this->renderSpreadsheetItems();
 
-        $path = Yii::getAlias($path);
         $writerType = ucfirst(pathinfo($path, PATHINFO_EXTENSION));
         $writer = IOFactory::createWriter($this->spreadsheet, $writerType);
 
-        FileHelper::createDirectory(dirname($path), 0777);
-        $writer->save($path);
+        $fullpath = Yii::getAlias($path);
+        FileHelper::createDirectory(dirname($fullpath));
+        $writer->save($fullpath);
 
         return $path;
     }
@@ -106,7 +98,7 @@ class GridView2Spreadsheet extends \yii\grid\GridView
                 continue;
             }
 
-            if (isset($this->convertFormat[$column->format])) {
+            if (is_string($column->format) && isset($this->convertFormat[$column->format])) {
                 $column->format = $this->convertFormat[$column->format];
             }
 
@@ -114,5 +106,30 @@ class GridView2Spreadsheet extends \yii\grid\GridView
             $this->sheet->setCellValueByColumnAndRow($col, 1, $header);
             $col++;
         }
+    }
+
+    public function getSheet()
+    {
+        if ($this->_sheet) {
+            return $this->_sheet;
+        }
+
+        $this->_sheet = $this->spreadsheet->getActiveSheet();
+        return $this->_sheet;
+    }
+
+    public function getSpreadsheet()
+    {
+        if ($this->_spreadsheet) {
+            return $this->_spreadsheet;
+        }
+
+        $this->_spreadsheet = new Spreadsheet();
+        return $this->_spreadsheet;
+    }
+
+    public function setSpreadsheet($spreadsheet)
+    {
+        return $this->_spreadsheet = $spreadsheet;
     }
 }
