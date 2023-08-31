@@ -64,6 +64,8 @@ abstract class BaseController extends \yii\web\Controller
 
     protected $action2title = [];
 
+    protected $topMenu = [];
+
     public function behaviors()
     {
         $behaviors = parent::behaviors();
@@ -268,5 +270,10 @@ abstract class BaseController extends \yii\web\Controller
     {
         /* @var $formBuilder \Crud\builder\FormBuilder */
         $formBuilder = $event->sender;
+    }
+
+    public function getTopMenu()
+    {
+        return $this->topMenu;
     }
 }

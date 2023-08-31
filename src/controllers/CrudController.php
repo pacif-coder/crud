@@ -28,14 +28,16 @@ abstract class CrudController extends BaseController
 
     public $parentModelID;
 
-    public $topMenu = [];
+    public $layout = false;
+
+    protected static $modelName2modelClass = [];
+
+    protected $titleParams = [];
 
     /**
      * @var CrudTemplateParameters
      */
     protected $templateParams;
-
-    protected $titleParams = [];
 
     protected $globalUseClass = [];
 
@@ -47,6 +49,8 @@ abstract class CrudController extends BaseController
 
     public function init()
     {
+        $this->fillModelClass();
+
         if (!$this->modelClass) {
             throw new InvalidConfigException('Not find model class');
         }
@@ -61,8 +65,6 @@ abstract class CrudController extends BaseController
             $this->parentModelID = $this->getModelID();
         }
 
-        $this->layout = false;
-
         $this->fillTemplateFindPaths();
 
         $this->fillTemplateGlobalUseClass();
@@ -70,6 +72,16 @@ abstract class CrudController extends BaseController
         $this->mapFakeTheme();
 
         $this->templateParams = Yii::createObject(CrudTemplateParameters::class);
+    }
+
+    public function fillModelClass()
+    {
+        $name = Yii::$app->request->get('model-name');
+        if (!$name || !isset(static::$modelName2modelClass[$name])) {
+            return ;
+        }
+
+        $this->modelClass = static::$modelName2modelClass[$name];
     }
 
     protected function fillTemplateGlobalUseClass()
