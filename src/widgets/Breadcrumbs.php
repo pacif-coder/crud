@@ -52,7 +52,13 @@ class Breadcrumbs extends \yii\base\BaseObject
 
         if ($this->withBegin) {
             $modelData = $this->model2data($model);
-            $url = $this->getUrlToModel($modelData, true);
+
+            // the first and last link - are the same thing
+            if ($this->lastUrl && !$parents) {
+                $url = $this->lastUrl;
+            } else {
+                $url = $this->getUrlToModel($modelData, true);
+            }
 
             $messageCategory = ClassI18N::class2messagesPath($modelData['class']);
             $label = Lang::t($messageCategory, 'Top list items');
