@@ -6,6 +6,7 @@ use yii\web\BadRequestHttpException;
 
 use Crud\data\TreeNodeDelete;
 use Crud\helpers\ClassI18N;
+use Crud\models\ModelWithParentInterface;
 use Crud\models\tree_node\Node;
 use Crud\models\tree_node\Type;
 use Crud\models\tree_node\WithPathInterface;
@@ -76,6 +77,10 @@ class TreeNodeController extends CrudController
 
     protected function createEditBreadcrumbs($isCreate, $model)
     {
+        if (!is_a($model, ModelWithParentInterface::class)) {
+            return parent::createEditBreadcrumbs($isCreate, $model);
+        }
+
         $node = Node::factory();
         $node->id = $model->id;
         $node->parent_id = $model->parent_id;
