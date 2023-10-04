@@ -125,7 +125,7 @@ class Enum
         return self::getQuery($model, $attr)->multiple;
     }
 
-    public static function getQuery($model, $attr)
+    public static function getQuery($model, $attr, $noException = false)
     {
         $class = get_class($model);
         if (isset(self::$activeQueries[$class][$attr])) {
@@ -134,11 +134,19 @@ class Enum
 
         $method = "get{$attr}";
         if (!$model->hasMethod($method)) {
+            if ($noException) {
+                return self::$activeQueries[$class][$attr] = false;
+            }
+
             throw new Exception("Method {$method} is not exist");
         }
 
         $query = $model->{$method}();
         if (!($query instanceof ActiveQueryInterface)) {
+            if ($noException) {
+                return self::$activeQueries[$class][$attr] = false;
+            }
+
             throw new Exception("Query is not ActiveQueryInterface ");
         }
 
