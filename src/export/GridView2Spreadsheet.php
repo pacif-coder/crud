@@ -39,7 +39,7 @@ class GridView2Spreadsheet extends \yii\grid\GridView
         FileHelper::createDirectory(dirname($fullpath));
         $writer->save($fullpath);
 
-        return $path;
+        return $fullpath;
     }
 
     /**
