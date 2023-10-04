@@ -15,7 +15,9 @@ class CheckboxColumn extends \yii\grid\CheckboxColumn
 
     public $checkPermission = null;
 
-    public $checkboxOptions = ['data-role' => 'checkbox-column'];
+    public $checkboxOptions = ['data-role' => self::CHECKBOX_COLUMN_DATA_ROLE];
+
+    const CHECKBOX_COLUMN_DATA_ROLE = 'checkbox-column';
 
     protected function renderDataCellContent($model, $key, $index) {
         if (is_callable($this->checkboxOptions) || $this->checkboxOptions instanceof Closure) {
