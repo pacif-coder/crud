@@ -24,18 +24,31 @@ class DataColumn extends \yii\grid\DataColumn
             return;
         }
 
+        // only Bootstrap5
         if (5 != Html::getBootstrapVersion()) {
             return;
         }
 
-        if (!is_array($this->filter) && !$this->format === 'boolean') {
+        // only dropdawn
+        if (!(is_array($this->filter) || 'boolean' === $this->format)) {
             return;
         }
 
-        // change control class name for dropdawn only in Bootstrap5
+        // change control class name
         if ('form-control' == $this->filterInputOptions['class']) {
             $this->filterInputOptions['class'] = 'form-select';
         }
+    }
+
+    public function renderDataCell($model, $key, $index)
+    {
+        if (is_callable($this->contentOptions) || $this->contentOptions instanceof Closure) {
+            $options = call_user_func($this->contentOptions, $model, $key, $index, $this);
+        } else {
+            $options = $this->contentOptions;
+        }
+
+        return Html::tag('td', $this->renderDataCellContent($model, $key, $index), $options);
     }
 
     protected function renderDataCellContent($model, $key, $index)
