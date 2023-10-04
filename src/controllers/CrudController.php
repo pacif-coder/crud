@@ -172,6 +172,10 @@ abstract class CrudController extends BaseController
 
     protected function createIndexTitle()
     {
+        if ($this->title) {
+            return;
+        }
+
         $model = $this->createModel();
         $this->model2titleParams($model);
 
@@ -197,9 +201,9 @@ abstract class CrudController extends BaseController
             $this->breadcrumbs['withBegin'] = (bool) $this->getModelID();
         }
 
-        $this->breadcrumbs = Yii::createObject($this->breadcrumbs);
-        $this->breadcrumbs->createIndexBreadcrumbs($this->createModel());
-        $this->templateParams->breadcrumbs = $this->breadcrumbs;
+        $breadcrumbs = $this->getBreadcrumbs();
+        $breadcrumbs->createIndexBreadcrumbs($this->createModel());
+        $this->templateParams->breadcrumbs = $breadcrumbs;
     }
 
     /**
@@ -254,6 +258,10 @@ abstract class CrudController extends BaseController
 
     protected function createEditTitle($isCreate, $model)
     {
+        if ($this->title) {
+            return;
+        }
+
         if ($isCreate) {
             $this->title = $this->t('Create item', $this->titleParams);
         } elseif (isset($this->titleParams['nameAttribute'])) {
@@ -341,10 +349,18 @@ abstract class CrudController extends BaseController
             $this->breadcrumbs['lastUrl'] = $this->getBackUrl();
         }
 
-        $this->breadcrumbs = Yii::createObject($this->breadcrumbs);
-        $this->breadcrumbs->createEditBreadcrumbs($model);
+        $breadcrumbs = $this->getBreadcrumbs();
+        $breadcrumbs->createEditBreadcrumbs($model);
+        $this->templateParams->breadcrumbs = $breadcrumbs;
+    }
 
-        $this->templateParams->breadcrumbs = $this->breadcrumbs;
+    public function getBreadcrumbs()
+    {
+        if (is_object($this->breadcrumbs)) {
+            return $this->breadcrumbs;
+        }
+
+        return $this->breadcrumbs = Yii::createObject($this->breadcrumbs);
     }
 
     /**
