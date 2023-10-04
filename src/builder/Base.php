@@ -528,8 +528,7 @@ class Base extends \yii\base\Component
             $items = isset($this->enumOptions[$field]) ? $this->enumOptions[$field] : [];
         }
 
-        // special case - boolean data is output only for reads
-        // use booleanFormat in formatter
+        // special case - enum data is output only for reads
         if (in_array($field, $this->readyOnlyFields) && $isEnum &&
                 !array_key_exists('value', $fieldOptions)) {
 
