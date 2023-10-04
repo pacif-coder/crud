@@ -102,7 +102,7 @@ abstract class BaseController extends \yii\web\Controller
         }
 
         if (isset($this->action2title[$action->id])) {
-            $this->setTitle($this->action2title[$action->id]);
+            $this->title = $this->action2title[$action->id];
         }
 
         return $r;
