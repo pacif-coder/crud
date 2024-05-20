@@ -15,9 +15,8 @@ class DragIconColumn extends \yii\grid\Column
      */
     protected function renderDataCellContent($model, $key, $index)
     {
-        $size = Html::getSmallSize();
         $attrs = [
-            'class' => "btn btn-info btn-{$size}",
+            'class' => 'text-info',
             'data-role' => 'drag-icon'
         ];
 
@@ -25,6 +24,6 @@ class DragIconColumn extends \yii\grid\Column
             $attrs['disabled'] = 'disabled';
         }
 
-        return Html::button(Html::icon('move'), $attrs);
+        return Html::icon('arrow-down-up', '', $attrs);
     }
 }
