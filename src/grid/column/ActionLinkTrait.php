@@ -85,12 +85,22 @@ trait ActionLinkTrait
      * @param int $index the current row index
      * @return string the created URL
      */
-    public function createUrl($action, $model, $key, $index)
+    public function createUrl($action, $model, $key, $index, $backUrl)
     {
         if (is_callable($this->urlCreator)) {
-            return call_user_func($this->urlCreator, $action, $model, $key, $index, $this);
+            return call_user_func($this->urlCreator, $action, $model, $key, $index, $backUrl, $this);
         }
 
+        $params = $this->getUrlParams($action, $model, $key, $index);
+        if ($backUrl) {
+            $params = $this->addBackUrl($params, $index);
+        }
+
+        return Url::toRoute($params);
+    }
+
+    protected function getUrlParams($action, $model, $key, $index)
+    {
         $params = Yii::$app->request->get();
         foreach ($this->removeParams as $removeParam) {
             if (isset($params[$removeParam])) {
@@ -107,12 +117,13 @@ trait ActionLinkTrait
         $controller = $this->getController($model);
         $params[0] = $controller? "{$controller}/{$action}" : $action;
 
-        if ($this->backUrl) {
-            $hash = $this->addHash? $index : null;
-            $params = BackUrlBehavior::addBackUrl($params, $hash);
-        }
+        return $params;
+    }
 
-        return Url::toRoute($params);
+    protected function addBackUrl($params, $index)
+    {
+        $hash = $this->addHash? $index : null;
+        return BackUrlBehavior::addBackUrl($params, $hash);
     }
 
     protected function checkPermission($model, $key, $index)

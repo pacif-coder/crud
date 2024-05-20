@@ -26,12 +26,6 @@ trait GridViewTrait
     public $toolbarButtonOptions = [];
 
     public $isInsideForm;
-    public $surroundForm;
-    public $surroundFormAction = '';
-    public $surroundFormMethod = 'post';
-    public $surroundFormOptions = [];
-
-    public $messageCategory;
 
     protected function registerDragable()
     {

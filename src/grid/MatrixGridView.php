@@ -23,7 +23,14 @@ class MatrixGridView extends \ThumbOnDemand\widgets\MatrixGridView
     public $dragableСlass = MatrixGridDragable::class;
     public $dragableOptions = [];
 
+    public $messageCategory;
+
     public $renamedLink2ModelAttr = [];
+
+    public $surroundForm = true;
+    public $surroundFormAction = '';
+    public $surroundFormMethod = 'post';
+    public $surroundFormOptions = [];
 
     public function run()
     {
