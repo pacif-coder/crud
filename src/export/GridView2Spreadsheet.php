@@ -11,7 +11,7 @@ use yii\helpers\FileHelper;
 /**
  *
  */
-class GridView2Spreadsheet extends \yii\grid\GridView
+class GridView2Spreadsheet extends \Crud\grid\BaseGridView
 {
     public $convertFormat = [
         'text' => 'raw',
