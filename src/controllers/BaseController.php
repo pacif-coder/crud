@@ -14,6 +14,7 @@ use Crud\behaviors\BackUrlBehavior;
 use Crud\builder\FormBuilder;
 use Crud\builder\GridBuilder;
 use Crud\helpers\Lang;
+use Crud\models\tree_node\ActiveRecord;
 use Crud\widgets\Breadcrumbs;
 
 /**
@@ -22,6 +23,10 @@ use Crud\widgets\Breadcrumbs;
 abstract class BaseController extends \yii\web\Controller
 {
     public $messageCategory;
+
+    public $messageCategory2path = [
+//        Lang::addCategory2Path('crud', dirname(__DIR__) . DIRECTORY_SEPARATOR . 'messages');
+    ];
 
     public $assets = [];
 
@@ -90,8 +95,6 @@ abstract class BaseController extends \yii\web\Controller
         foreach ($this->assets as $asset) {
             $view->registerAssetBundle($asset);
         }
-
-        $this->registerTranslations();
     }
 
     public function beforeAction($action): bool
@@ -106,11 +109,6 @@ abstract class BaseController extends \yii\web\Controller
         }
 
         return $r;
-    }
-
-    public function registerTranslations()
-    {
-        Lang::addCategory2Path('crud', dirname(__DIR__) . '/messages');
     }
 
     /**
@@ -191,12 +189,25 @@ abstract class BaseController extends \yii\web\Controller
 
     protected function addToBreadcrumbs($url, $label)
     {
-        $this->breadcrumbs = Yii::createObject($this->breadcrumbs);
+        $breadcrumbs = $this->getBreadcrumbs();
 
-        $this->breadcrumbs->links[] = [
-            'url' => Url::toRoute($url),
-            'label' => $label
-        ];
+        $breadcrumbs->addLink(Url::toRoute($url), $label);
+    }
+
+    public function getBreadcrumbs()
+    {
+        if (is_object($this->breadcrumbs)) {
+            return $this->breadcrumbs;
+        }
+
+        $this->createBreadcrumbs();
+        return $this->breadcrumbs;
+    }
+
+    protected function createBreadcrumbs()
+    {
+        $this->breadcrumbs += ['class' => Breadcrumbs::class];
+        $this->breadcrumbs = Yii::createObject($this->breadcrumbs);
     }
 
     protected function setTitle($title)
@@ -218,7 +229,7 @@ abstract class BaseController extends \yii\web\Controller
 
     protected function t($message, $params = [], $language = null)
     {
-        return Lang::t($this->messageCategory, $message, $params, $language);
+       return Lang::t($this->messageCategory, $message, $params, $language);
     }
 
     protected function _findModel($class, $id, $exception404 = true)
