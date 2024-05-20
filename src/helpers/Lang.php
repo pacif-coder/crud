@@ -6,6 +6,7 @@ use Crud\i18n\PhpMessageSource;
 use Crud\helpers\ClassI18N;
 
 use Exception;
+use ReflectionClass;
 
 /**
  *
@@ -13,6 +14,10 @@ use Exception;
 class Lang
 {
     protected static $checked = [];
+
+    protected static $regClass = [];
+
+    protected static $regModuleDirs = [];
 
     public static function t($category, $message, $params = [], $language = null)
     {
@@ -62,6 +67,105 @@ class Lang
         }
 
         return false;
+    }
+
+    public static function regClassPref($class, $pref)
+    {
+        $class2path = self::getParentClass2path($class);
+
+        $nsPref = '\\' . $pref . '\\';
+        $fsPref = DIRECTORY_SEPARATOR . $pref . DIRECTORY_SEPARATOR;
+
+        $classes = [];
+        foreach ($class2path as $class => $path) {
+            $pos = strpos($class, $nsPref);
+            if (!$pos) {
+                continue;
+            }
+            $ns = substr($class, 0, $pos + 1);
+
+            $pos = strpos($path, $fsPref);
+            if (!$pos) {
+                continue;
+            }
+
+            $codeDir = substr($path, 0, $pos + 1);
+            $messagesDir = $codeDir . 'messages';
+            if (!file_exists($messagesDir) || !is_dir($messagesDir)) {
+                continue;
+            }
+
+            $classes[] = $class;
+            self::addCategory2Path($ns, $messagesDir);
+        }
+
+        return $classes;
+    }
+
+    public static function classes2messagesCategory($classOrClasses)
+    {
+        if (is_array($classOrClasses)) {
+            $messageCategory = [];
+            foreach ((array) $classOrClasses as $class) {
+                $messageCategory[] = ClassI18N::class2messagesCategory($class);
+            }
+
+            return $messageCategory;
+        }
+
+        return ClassI18N::class2messagesCategory($classOrClasses);
+    }
+
+    public static function getParentClass2path($className)
+    {
+        $class2path = [];
+        $ref = new ReflectionClass($className);
+        $name = $ref->getName();
+        if (0 === strpos($name, 'yii\\')) {
+            return $class2path;
+        }
+
+        $class2path[$name] = $ref->getFileName();
+
+        // Получаем родительский класс, пока он существует
+        while ($parentClass = $ref->getParentClass()) {
+            $name = $parentClass->getName();
+            if (0 === strpos($name, 'yii\\')) {
+                break;
+            }
+
+            $class2path[$name] = $parentClass->getFileName();
+            $ref = $parentClass;
+        }
+
+        return $class2path;
+    }
+
+    public static function modelInModuleRegistered($class)
+    {
+        if (in_array($class, self::$regClass)) {
+            return;
+        }
+
+        self::$regClass[] = $class;
+
+        $classPos = strrpos($class, '\models\\');
+        $moduleNamespace = substr($class, 0, $classPos);
+        if (in_array($moduleNamespace, self::$regModuleDirs)) {
+            return;
+        }
+
+        $ref = new ReflectionClass($class);
+        $path = $ref->getFileName();
+
+        $dir = DIRECTORY_SEPARATOR . 'models' . DIRECTORY_SEPARATOR;
+        $filePos = strrpos($path, $dir);
+        $moduleDir = substr($path, 0, $filePos);
+
+        $messageDir = $moduleDir . DIRECTORY_SEPARATOR . 'messages';
+        self::addCategory2Path($moduleNamespace, $messageDir);
+
+        self::$regModuleDirs[] = $moduleNamespace;
     }
 
     public static function addCategory2Path($category, $messageDir, $cutCategoryPrefix = true)
