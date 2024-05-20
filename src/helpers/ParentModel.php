@@ -1,6 +1,7 @@
 <?php
 namespace Crud\helpers;
 
+use yii\base\Model;
 use yii\validators\ExistValidator;
 
 use Crud\models\ModelWithParentInterface;
@@ -75,7 +76,18 @@ class ParentModel
         return self::$parents[$modelParentClass][$modelParentID] = array_reverse($list);
     }
 
-    public static function getParentModelAttr($modelClass)
+    public static function getParentID(Model $model, $raiseException = true)
+    {
+        $attr = self::getParentModelAttr($model, $raiseException);
+        if (!$model->hasProperty($attr)) {
+            $class = get_class($model);
+            throw new Exception("Not have attr '{$attr}' in class '{$class}'");
+        }
+
+        return $model->{$attr};
+    }
+
+    public static function getParentModelAttr($modelClass, $raiseException = true)
     {
         if (is_object($modelClass)) {
             $modelClass = get_class($modelClass);
@@ -92,6 +104,10 @@ class ParentModel
         $attr = null;
         if (defined("$modelClass::PARENT_MODEL_ATTR")) {
             $attr = $modelClass::PARENT_MODEL_ATTR;
+        }
+
+        if (!$attr && $raiseException) {
+            throw new Exception("Not find parent attr in class '{$modelClass}'");
         }
 
         return self::$class2parentModelAttr[$modelClass] = $attr;
