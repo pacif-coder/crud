@@ -19,7 +19,7 @@ class Cell extends \ThumbOnDemand\widgets\Cell
         $str = $this->getName($model, $key, $index);
 
         if ($this->withLink($model, $key, $index)) {
-            $url = $this->createUrl($this->action, $model, $key, $index);
+            $url = $this->createUrl($this->action, $model, $key, $index, $this->backUrl);
             $str = Html::a($str, $url);
         }
 
