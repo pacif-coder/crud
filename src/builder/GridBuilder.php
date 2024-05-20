@@ -4,22 +4,22 @@ namespace Crud\builder;
 use Yii;
 use yii\base\Event;
 use yii\data\ActiveDataProvider;
-use yii\db\ActiveRecord;
+use yii\grid\DataColumn;
 use yii\helpers\ArrayHelper;
 use yii\validators\ExistValidator;
 
 use Crud\builder\Base;
 use Crud\grid\column\ActionLinkColumn;
-use Crud\grid\column\DataColumn;
 use Crud\grid\column\DragIconColumn;
 use Crud\grid\FilterModel;
 use Crud\grid\GridView;
 use Crud\grid\MatrixGridView;
 use Crud\grid\Sort;
 use Crud\helpers\ModelName;
+use Crud\helpers\Enum;
 use Crud\helpers\ParentModel;
-use Crud\models\ModelWithParentInterface;
 use Crud\models\ModelWithOrderInterface;
+use Crud\models\ModelWithParentInterface;
 
 /**
  * XXX
@@ -29,6 +29,10 @@ class GridBuilder extends Base
 {
     public $gridType;
     public $gridClass;
+
+    public $provider = [
+        'class' => ActiveDataProvider::class,
+    ];
 
     public $columns;
     public $removeColumns = [];
@@ -46,9 +50,13 @@ class GridBuilder extends Base
     public $pageSize;
     public $gridWithEditLink = true;
     public $gridOptions = [];
+
+    public $ownSorting;
     public $dragable;
     public $addDragIconColumn = true;
     public $removeSortColumn = true;
+
+    public $removeParentColumn = true;
 
     public $addToolbarButtons = [];
     public $removeToolbarButtons = [];
@@ -80,6 +88,8 @@ class GridBuilder extends Base
 
     public $joinWith = [];
 
+    public $linkedModelIDAttr = [];
+
     /**
      * @event Grid types
      */
@@ -103,13 +113,12 @@ class GridBuilder extends Base
      * @var \yii\db\ActiveQuery
      */
     protected $query;
-    protected $provider;
+
     protected $filterModel;
 
     protected $_model;
     protected $_transformSortAttrMap = [];
     protected $_transformFilterAttrMap = [];
-    protected $_backupLinkQueryIDAttr = [];
 
     protected $_isChangeGridOption = false;
 
@@ -133,15 +142,19 @@ class GridBuilder extends Base
     {
         $this->_checkBuilded();
 
+        $this->linkedModelIDAttr = [];
         $this->_isExtraControlCreated = false;
         $this->_transformSortAttrMap = $this->_transformFilterAttrMap = [];
-        $this->_backupLinkQueryIDAttr = [];
 
         if ($modelClass && $modelClass != $this->modelClass) {
             $this->setModelClass($modelClass);
         }
 
-        if (null === $this->dragable && is_a($this->modelClass, ModelWithOrderInterface::class, true)) {
+        if (null === $this->ownSorting && is_a($this->modelClass, ModelWithOrderInterface::class, true)) {
+            $this->ownSorting = true;
+        }
+
+        if (null === $this->dragable && $this->ownSorting) {
             $this->dragable = true;
         }
 
@@ -150,7 +163,10 @@ class GridBuilder extends Base
         if (!$this->gridType) {
             $this->gridType = self::TYPE_DEFAULT;
         }
-        $this->gridClass = $this->gridType2Class[$this->gridType];
+
+        if (!$this->gridClass) {
+            $this->gridClass = $this->gridType2Class[$this->gridType];
+        }
 
         if (null === $this->columns) {
             $this->columns = [];
@@ -188,7 +204,7 @@ class GridBuilder extends Base
             $this->columns[$column] = $desc;
         }
 
-        if ($this->dragable) {
+        if ($this->ownSorting) {
             // off sort in table column
             foreach ($this->columns as $column => $desc) {
                 if (!isset($desc['attribute'])) {
@@ -201,14 +217,29 @@ class GridBuilder extends Base
 
             // remove sort attr column
             if ($this->removeSortColumn && is_a($this->modelClass, ModelWithOrderInterface::class, true)) {
-                $sortAttr = $this->modelClass::ORDER_ATTR;
-                if ($sortAttr && isset($this->columns[$sortAttr])) {
-                    unset($this->columns[$sortAttr]);
+                $orderAttrs = $this->modelClass::ORDER_ATTR;
+                if (is_array($orderAttrs)) {
+                    $orderAttrs = array_keys($orderAttrs);
+                } else {
+                    $orderAttrs = [$orderAttrs];
+                }
+
+                foreach ($orderAttrs as $orderAttr) {
+                    if (isset($this->columns[$orderAttr])) {
+                        unset($this->columns[$orderAttr]);
+                    }
                 }
             }
+        }
 
-            if ($this->addDragIconColumn) {
-                $this->columns[] = ['class' => DragIconColumn::class];
+        if ($this->dragable && $this->addDragIconColumn) {
+            $this->columns[] = ['class' => DragIconColumn::class];
+        }
+
+        if ($this->removeParentColumn && is_a($this->modelClass, ModelWithParentInterface::class, true)) {
+            $parentAttr = ParentModel::getParentModelAttr($this->modelClass);
+            if ($parentAttr && isset($this->columns[$parentAttr])) {
+                unset($this->columns[$parentAttr]);
             }
         }
 
@@ -320,6 +351,9 @@ class GridBuilder extends Base
         $this->filterModel->filter($query);
     }
 
+    /**
+     * @return FilterModel
+     */
     public function getFilter()
     {
         return $this->filterModel;
@@ -333,7 +367,7 @@ class GridBuilder extends Base
 
         $this->filterModel = new FilterModel();
         $this->filterModel->builder2this($this);
-        $this->filterModel->setModel(Yii::createObject($this->modelClass));
+        $this->filterModel->setModel($this->_createTmpModel());
         $this->filterModel->load(Yii::$app->request->get());
     }
 
@@ -342,13 +376,12 @@ class GridBuilder extends Base
      */
     public function getProvider()
     {
-        if (null !== $this->provider) {
+        if (!is_array($this->provider)) {
             return $this->provider;
         }
 
-        $options = [
-            'query' => $this->getQuery(),
-        ];
+        $options = $this->provider;
+        $options['query'] = $this->getQuery();
 
         if ($this->dragable) {
             $options['sort'] = false;
@@ -360,6 +393,10 @@ class GridBuilder extends Base
             $defaultOrder = null;
             if (null !== $this->defaultOrder) {
                 $defaultOrder = $this->defaultOrder;
+                if (is_string($defaultOrder)) {
+                    $defaultOrder = [$defaultOrder => SORT_ASC];
+                }
+
             } elseif (($nameAttr = ModelName::getNameAttr($this->modelClass))) {
                 $defaultOrder = [$nameAttr => SORT_ASC];
             }
@@ -373,7 +410,7 @@ class GridBuilder extends Base
             $options['pagination']['pageSize'] = $this->pageSize;
         }
 
-        $this->provider = new ActiveDataProvider($options);
+        $this->provider = Yii::createObject($options);
         $sort = $this->provider->getSort();
         if (!$sort) {
             return $this->provider;
@@ -445,7 +482,7 @@ class GridBuilder extends Base
             $this->gridOptions['filterModel'] = $this->filterModel;
         }
 
-        $this->gridOptions['renamedLink2ModelAttr'] = $this->_backupLinkQueryIDAttr;
+        $this->gridOptions['renamedLink2ModelAttr'] = $this->linkedModelIDAttr;
 
         return $this->gridOptions;
     }
@@ -470,8 +507,13 @@ class GridBuilder extends Base
             $this->query->andWhere([$column => $this->parentModelID]);
         }
 
-        if ($this->dragable) {
-            $this->query->orderBy([$modelClass::ORDER_ATTR => SORT_ASC]);
+        if ($this->ownSorting) {
+            $order = $modelClass::ORDER_ATTR;
+            if (!is_array($order)) {
+                $order = [$order => SORT_ASC];
+            }
+
+            $this->query->orderBy($order);
         }
 
         if (!$this->query->select) {
@@ -488,6 +530,10 @@ class GridBuilder extends Base
 
     protected function selectInFilter()
     {
+        if (!$this->withFilter) {
+            return;
+        }
+
         foreach ($this->columns as $column => $desc) {
             $attr = null;
             if (is_array($desc) && isset($desc['attribute'])) {
@@ -498,23 +544,30 @@ class GridBuilder extends Base
                 continue;
             }
 
-            if (is_array($desc) && isset($desc['filter']) && !$desc['filter']) {
+            if (null !== $this->filterAttrs && !in_array($attr, $this->filterAttrs)) {
                 continue;
             }
 
-            $model = $this->_createTmpModel();
-            $this->initValidators($model);
-
-            if (!isset($this->validatorts[$attr])) {
+            if (is_array($desc) && isset($desc['filter']) && $desc['filter']) {
                 continue;
             }
 
-            foreach ($this->validatorts[$attr] as $validator) {
-                if ($validator instanceof ExistValidator) {
-                    $desc['filter'] = [];
-                    $this->addEnumOptionsByExistValidator($desc['filter'], $validator, $attr);
-                    $this->columns[$column] = $desc;
+            $filter = null;
+            $pos = strrpos($attr, '.');
+            if (false !== $pos) {
+                $linkName = substr($attr, 0, $pos);
+                $model = $this->_joinWithModels[$linkName];
+
+//                $filter = Enum::getListByClass(get_class($model));
+            } else {
+                $model = $this->_createTmpModel();
+                if (Enum::isEnum($model, $attr)) {
+                     $filter = Enum::getList($model, $attr);
                 }
+            }
+
+            if (null !== $filter) {
+                $this->columns[$column]['filter'] = $filter;
             }
         }
     }
@@ -575,11 +628,15 @@ class GridBuilder extends Base
         }
 
         $linkQueryIDAttr = '_lq_' . self::$_autoJoinI++;
-        $this->_backupLinkQueryIDAttr[$attr] = $linkQueryIDAttr;
+        $this->linkedModelIDAttr[$attr] = $linkQueryIDAttr;
         $query->addSelect("[[{$table}]].[[{$attr}]] as [[{$linkQueryIDAttr}]]");
 
         $query->addSelect("[[{$joinToTable}]].[[{$nameAttr}]] as [[{$attr}]]");
         $this->_transformSortAttrMap[$attr] = "[[{$joinToTable}]].[[{$nameAttr}]]";
+
+        if (isset($this->columns[$attr])) {
+            $this->columns[$attr]['format'] = 'text';
+        }
 
         $joinTableAttrs = array_keys($this->getDBColumns($targetModelClass));
         $tableAttrs = array_keys($this->getDBColumns($this->modelClass));
@@ -604,31 +661,39 @@ class GridBuilder extends Base
 
         $schema = Yii::$app->db->schema;
 
-        $model = $this->_createTmpModel();
         foreach ($this->joinWith as $name => $columns) {
-            $query->joinWith($name, false, 'left join');
+            $query->joinWith($name, false);
 
-            $method = "get{$name}";
-            $object = $model->{$method}();
-            $table = $object->modelClass::tableName();
+            $model = $this->_createTmpModel();
+            foreach (explode('.', $name) as $relationName) {
+                $relation = $model->getRelation($relationName);
+                $model = $relation->modelClass::instance();
+            }
 
-            $model = $object->modelClass::instance();
             $this->_joinWithModels[$name] = $model;
 
+            $table = $relation->modelClass::tableName();
             foreach ((array) $columns as $column) {
                 $attr = "{$name}.{$column}";
                 $this->columns[$attr] = [
                     'attribute' => $attr,
                     'label' => $model->getAttributeLabel($column),
+                    'filterAttribute' => $attr,
                 ];
 
                 $as = $schema->quoteSimpleColumnName($attr);
-                $query->addSelect("[[{$table}]].[[{$column}]] as {$as}");
+                $query->addSelect("{{{$table}}}.[[{$column}]] as {$as}");
 
-                $this->_transformSortAttrMap[$attr] = "[[{$table}]].[[{$column}]]";
+                $this->_transformSortAttrMap[$attr] = "{{{$table}}}.[[{$column}]]";
             }
 
-            $allOptions = $this->_getJoinedOptions($object->modelClass, $columns);
+            $keys = $relation->modelClass::primaryKey();
+            $joinWithID = current($keys);
+            $joinWithIDAttr = '_qw_' . self::$_autoJoinI++;
+            $this->linkedModelIDAttr[$name] = $joinWithIDAttr;
+            $query->addSelect("{{{$table}}}.[[{$joinWithID}]] as [[{$joinWithIDAttr}]]");
+
+            $allOptions = $this->_getJoinedOptions($relation->modelClass, $columns);
 
             foreach ($allOptions as $param => $map) {
                 foreach ($map as $column => $value) {
@@ -781,11 +846,13 @@ class GridBuilder extends Base
             if (is_string($desc)) {
                 $desc = $this->parseColumnDesc($desc);
                 $column = $desc['attribute'];
-            } elseif (!isset($desc['attribute']) && !is_int($column)) {
+            } elseif (!isset($desc['attribute']) && !is_int($column)
+                      && (!isset($desc['class']) || is_a($desc['class'], DataColumn::class, true))) {
+
                 $desc['attribute'] = $column;
             }
 
-            if (!array_key_exists('label', $desc) && isset($desc['attribute']) && $desc['attribute']) {
+            if (!isset($desc['label']) && isset($desc['attribute']) && $desc['attribute']) {
                 $desc['label'] = $this->_createTmpModel()->getAttributeLabel($desc['attribute']);
             }
 
