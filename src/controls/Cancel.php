@@ -17,6 +17,10 @@ class Cancel extends Link
 
     public function getUrl()
     {
+        if ($this->url) {
+            return $this->url;
+        }
+
         $view = Yii::$app->getView();
         return $view->context->getBackUrl();
     }
