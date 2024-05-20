@@ -224,6 +224,8 @@ implements CopyMessageCategoryInterface
 
         if ($this->backUrl) {
             $get = BackUrlBehavior::addBackUrl($get, $this->backUrlHash);
+        } elseif (isset($get[BackUrlBehavior::BACK_URL_PARAM])) {
+            unset($get[BackUrlBehavior::BACK_URL_PARAM]);
         }
 
         return $get;
