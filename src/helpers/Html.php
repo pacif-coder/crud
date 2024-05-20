@@ -113,11 +113,11 @@ class Html extends \yii\helpers\Html
         return $lines;
     }
 
-    public static function icon($icon, $class = '')
+    public static function icon($icon, $class = '', $attrs = [])
     {
         if (5 == self::getBootstrapVersion()) {
             $icon = self::$bootstrapIcon3to5Map[$icon] ?? $icon;
-            $attrs = ['class' => "bi bi-{$icon}"];
+            self::addCssClass($attrs, "bi bi-{$icon}");
             self::addCssClass($attrs, $class);
             return Html::tag('i', '', $attrs);
         }
