@@ -33,6 +33,8 @@ class Enum
         if ($model->hasMethod($method)) {
             $query = $model->{$method}();
             if ($query instanceof ActiveQueryInterface) {
+                $query->primaryModel = null;
+
                 self::$activeQueries[$class][$attr] = $query;
                 return true;
             }
@@ -62,7 +64,6 @@ class Enum
                 }
             }
         }
-
     }
 
     public static function getList($model, $attr)
@@ -90,6 +91,11 @@ class Enum
         }
 
         $query = self::getQuery($model, $attr);
+        return self::query2list($query);
+    }
+
+    public static function query2list($query)
+    {
         $class = $query->modelClass;
 
         $keys = $class::primaryKey();
@@ -105,7 +111,12 @@ class Enum
         $query->asArray();
 
         if (is_a($class, ModelWithOrderInterface::class, true)) {
-            $query->orderBy($class::ORDER_ATTR);
+            $orderAttrs = $class::ORDER_ATTR;
+            if (!is_array($orderAttrs)) {
+                $orderAttrs = [$orderAttrs => SORT_ASC];
+            }
+
+            $query->orderBy($orderAttrs);
         } else {
             $query->orderBy($nameAttr);
         }
@@ -150,10 +161,10 @@ class Enum
             throw new Exception("Query is not ActiveQueryInterface ");
         }
 
-        $query->via = null;
+//        $query->via = null;
         $query->primaryModel = null;
 
-        return self::$activeQueries[$class][$attr] = $query;
+        return self::$activeQueries[$class][$attr] = clone($query);
     }
 
     public static function cashExists($key)
