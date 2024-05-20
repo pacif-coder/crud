@@ -7,11 +7,6 @@
 <title n:spaceless>
     {block title}
         {$view->title}
-
-        {if $view->title}
-            /
-        {/if}
-
     {/block}
 </title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,35 +24,51 @@
             {/block}
 
             {block header/topMenu}
-            {var $topMenu = $context->getTopMenu()}
-            <div class="top-menu collapse navbar-collapse justify-content-end" id="navbarCollapse" n:if="$topMenu">
-                <ul class="navbar-nav">
-                    {foreach $topMenu as $name => $link}
-                        <li class="nav-item">
-                            <a class="nav-link link-primary" href="{$link}">{$name}</a>
-                        </li>
-                    {/foreach}
-                </ul>
-            </div>
-
+                {var $topMenu = $context->getTopMenu()}
+                <div class="top-menu collapse navbar-collapse justify-content-end" id="navbarCollapse">
+                    <ul class="navbar-nav" n:if="$topMenu">
+                        {foreach $topMenu as $name => $link}
+                            {if is_array($link)}
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link link-primary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        {$name}
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        {foreach $link as $subName => $sublink}
+                                            <li><a class="dropdown-item" href="{$sublink}">{$subName}</a></li>
+                                        {/foreach}
+                                    </ul>
+                                </li>
+                            {else}
+                                <li class="nav-item">
+                                    <a class="nav-link link-primary" href="{$link}">{$name}</a>
+                                </li>
+                            {/if}
+                        {/foreach}
+                    </ul>
+                </div>
             {/block}
 
             {block header/avatar}
+
             {/block}
 
             {block header/logout}
-                {if $app->user->identity}
-                    <div class="navbar-text border-start border-secondary"></div>
+                <nav class="header-nav justify-content-end ms-auto">
+                    <ul class="d-flex align-items-center">
 
-                    <div class="navbar-text mx-2">
-                        <a class="text-decoration-none link-primary" title="Выйти"
-                           href="/logout">Выйти</a>
-                    </div>
-                    <div class="navbar-text pt-0 pb-0">
-                        <a class="bi bi-box-arrow-right h3 text-danger"
-                           href="/logout"></a>
-                    </div>
-                {/if}
+                        <li class="nav-item">
+                            <a class="text-decoration-none link-primary" title="Выйти"
+                               href="/logout">Выйти</a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link nav-icon ms-2" href="/logout" data-bs-toggle="dropdown">
+                                <i class="bi bi-box-arrow-right h3 text-danger"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
             {/block}
 
             {block header/login}
