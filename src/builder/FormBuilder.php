@@ -2,9 +2,7 @@
 namespace Crud\builder;
 
 use Yii;
-use yii\base\InvalidConfigException;
 use yii\base\Model;
-use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 
@@ -12,11 +10,12 @@ use Crud\builder\Base;
 use Crud\helpers\Enum;
 use Crud\helpers\Html;
 use Crud\helpers\Lang;
-use Crud\helpers\ModelName;
+use Crud\helpers\ParentModel;
+use Crud\models\ModelWithOrderInterface;
+use Crud\models\ModelWithParentInterface;
 use Crud\widgets\ActiveForm;
 use Crud\widgets\ActiveFormBootstrap5;
 
-use Exception;
 
 /**
  * XXX
@@ -25,6 +24,8 @@ use Exception;
 class FormBuilder extends Base
 {
     public $removeFields = [];
+    public $removeSortField = true;
+    public $removeParentField = true;
 
     public $addFieldsAfter = [];
 
@@ -106,8 +107,24 @@ class FormBuilder extends Base
 
         if (null === $this->fields) {
             $this->fields = array_intersect($model->attributes(), $allows);
-            if (is_a($model, ActiveRecord::class)) {
+            if ($model instanceof ActiveRecord) {
                 $this->fields = array_diff($this->fields, $this->modelClass::primaryKey());
+            }
+
+            if ($this->removeSortField && $model instanceof ModelWithOrderInterface) {
+                $order = $modelClass::ORDER_ATTR;
+                if (is_array($order)) {
+                    $order = array_keys($order);
+                } else {
+                    $order = [$order];
+                }
+
+                $this->fields = array_diff($this->fields, $order);
+            }
+
+            if ($this->removeParentField && $model instanceof ModelWithParentInterface) {
+                $parentAttr = ParentModel::getParentModelAttr($model);
+                $this->fields = array_diff($this->fields, [$parentAttr]);
             }
 
             $this->fields = array_diff($this->fields, $this->removeFields);
