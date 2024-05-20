@@ -1,8 +1,6 @@
 <?php
 namespace Crud\models;
 
-use Yii;
-use Crud\helpers\ClassI18N;
 use Crud\helpers\Lang;
 
 /**
@@ -11,14 +9,23 @@ use Crud\helpers\Lang;
  */
 class ActiveRecord extends \yii\db\ActiveRecord
 {
+    protected static $extendAttrsLabel = [];
+
     public function attributeLabels()
     {
         $list = [];
-        $category = ClassI18N::class2messagesPath(static::class);
-        foreach ($this->attributes() as $attribute) {
-            $list[$attribute] = Lang::t($category, $attribute);
+        $category = static::getMessageCategory();
+        $attrs = array_merge($this->attributes(), static::$extendAttrsLabel);
+        foreach ($attrs as $attr) {
+            $list[$attr] = Lang::t($category, $attr);
         }
 
         return $list;
+    }
+
+    public static function getMessageCategory()
+    {
+        $classes = Lang::regClassPref(static::class, 'models');
+        return Lang::classes2messagesCategory($classes);
     }
 }
