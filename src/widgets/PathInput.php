@@ -5,7 +5,6 @@ use Yii;
 use yii\helpers\Html;
 
 use Crud\helpers\ParentModel;
-use Crud\models\tree_node\Node;
 
 class PathInput extends \yii\widgets\InputWidget
 {
@@ -25,10 +24,11 @@ class PathInput extends \yii\widgets\InputWidget
     public function calcParentPath()
     {
         $path = $this->getHostInfo() . '/';
+        if (!ParentModel::getParentModelAttr($this->model)) {
+            return $path;
+        }
 
-        $node = $this->model instanceof Node? $this->model : $this->model->linkedNode();
-
-        $parents = ParentModel::loadParents($node);
+        $parents = ParentModel::loadParents($this->model);
         foreach ($parents as $node) {
             $path .= $node['model']->path . '/';
         }
