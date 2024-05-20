@@ -89,7 +89,11 @@ class TreeNodeLoader extends \yii\base\BaseObject
                 $asArray = $record->toArray();
                 if (isset($this->class2with[$class])) {
                     $with = $this->class2with[$class];
-                    $asArray[$with] = (object) $record->{$with}->toArray();
+                    if (isset($record->{$with}) && $record->{$with}) {
+                        $asArray[$with] = (object) $record->{$with}->toArray();
+                    } else {
+                        $asArray[$with] = null;
+                    }
                 }
 
                 $this->nodes[$id] = array_merge($this->nodes[$id], $asArray);
