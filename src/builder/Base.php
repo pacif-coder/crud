@@ -12,10 +12,10 @@ use yii\validators\EmailValidator;
 
 use Crud\controls\CopyMessageCategoryInterface;
 use Crud\controls\Base as BaseControl;
+use Crud\controls\Link;
 use Crud\helpers\Enum;
 use Crud\helpers\ClassI18N;
 use Crud\helpers\ModelName;
-use Crud\widgets\FileInput;
 use Crud\widgets\MaskedInput;
 
 use Exception;
@@ -34,6 +34,8 @@ class Base extends \yii\base\Component
     public $fieldTypes;
     public $type2fields;
     public $fieldOptions;
+    public $fieldMethodOptions = [];
+    public $fieldWidgetOptions = [];
     public $fieldLabels;
     public $fieldAddClass = [];
 
@@ -53,7 +55,6 @@ class Base extends \yii\base\Component
     public $fieldType2widget = [
         'date'  => 'yii\jui\DatePicker',
         'phone' => MaskedInput::class,
-        'file'  => FileInput::class,
     ];
 
     public $fieldType2widgetOptions = [
@@ -123,6 +124,10 @@ class Base extends \yii\base\Component
 
     public function controller2this($controller, $prefix = 'fb_')
     {
+        if (isset($controller->messageCategory)) {
+            $this->messageCategory = $controller->messageCategory;
+        }
+
         if (isset($controller->modelClass)) {
             $this->setModelClass($controller->modelClass, $prefix);
         }
@@ -292,7 +297,7 @@ class Base extends \yii\base\Component
         }
 
         if (is_callable($options)) {
-            $this->enumOptions[$attr] = call_user_func($options, $this);
+            $this->enumOptions[$attr] = call_user_func($options, $attr, $this);
         } elseif (in_array($attr, $this->translationEnumOptions)) {
             $keys = $this->enumOptions[$attr];
 
@@ -349,7 +354,7 @@ class Base extends \yii\base\Component
         $extraControls = array_merge($this->{$extraControlVar}, $this->addExtraControls);
 
         $this->{$extraControlVar} = [];
-        foreach ($extraControls as $place => $control) {
+        foreach ($extraControls as $control) {
             $options = null;
 
             if (is_string($control)) {
@@ -372,11 +377,15 @@ class Base extends \yii\base\Component
                 $control = array_merge($control, $options);
             }
 
+            if (!isset($control['class']) || !$control['class']) {
+                $control['class'] = Link::class;
+            }
+
             if (is_subclass_of($control['class'], CopyMessageCategoryInterface::class)) {
                 $control['messageCategory'] = $this->messageCategory;
             }
 
-            if ((!isset($control['place']) || !$control['place'])) {
+            if (!isset($control['place']) || !$control['place']) {
                 $control['place'] = $this->_extraControlDefPlace;
             }
 
@@ -384,7 +393,7 @@ class Base extends \yii\base\Component
                 $control['name'] = $control['action'];
             }
 
-            if (in_array($control['name'], $this->removeExtraControls)) {
+            if (isset($control['name']) && in_array($control['name'], $this->removeExtraControls)) {
                 continue;
             }
 
@@ -498,7 +507,7 @@ class Base extends \yii\base\Component
      */
     public function field2string($field, \yii\widgets\ActiveForm $form, $model)
     {
-        $type = isset($this->fieldTypes[$field]) ? $this->fieldTypes[$field] : null;
+        $type = $this->fieldTypes[$field]?? null;
         switch ($type) {
             case 'static':
                 $type = 'staticControl';
@@ -509,17 +518,8 @@ class Base extends \yii\base\Component
                 break;
         }
 
-        $fieldOptions = isset($this->fieldOptions[$field]) ? $this->fieldOptions[$field] : [];
-
-        // special case - boolean data is output only for reads
-        // use booleanFormat in formatter
-        if (in_array($field, $this->readyOnlyFields) && 'boolean' == $type &&
-                !array_key_exists('value', $fieldOptions)) {
-
-            $value = empty($model->{$field}) ? 0 : $model->{$field};
-            $fieldOptions['value'] = Yii::$app->formatter->booleanFormat[$value];
-            $type = 'staticControl';
-        }
+        $fieldOptions = $this->fieldOptions[$field]?? [];
+        $methodOptions = $this->fieldMethodOptions[$field]?? [];
 
         $isEnum = false;
         $items = null;
@@ -528,24 +528,26 @@ class Base extends \yii\base\Component
             $items = isset($this->enumOptions[$field]) ? $this->enumOptions[$field] : [];
         }
 
-        // special case - enum data is output only for reads
-        if (in_array($field, $this->readyOnlyFields) && $isEnum &&
-                !array_key_exists('value', $fieldOptions)) {
+        // read-only
+        if (in_array($field, $this->readyOnlyFields)) {
+            // special case - boolean data is output only for reads
+            // use booleanFormat in formatter
+            if ('boolean' == $type && !array_key_exists('value', $fieldOptions)) {
+                $value = empty($model->{$field})? 0 : $model->{$field};
+                $methodOptions['value'] = Yii::$app->formatter->booleanFormat[$value];
+                $type = 'staticControl';
+            }
 
-            $value = isset($items[$model->{$field}])? $items[$model->{$field}] : '';
-            $fieldOptions['value'] = $value;
-            $type = 'staticControl';
+            // special case - enum data is output only for reads
+            if ($isEnum && !array_key_exists('value', $fieldOptions)) {
+                $value = $items[$model->{$field}]?? '';
+                $methodOptions['value'] = $value;
+                $type = 'staticControl';
+            }
         }
 
-        $typeOptions = isset($this->fieldType2widgetOptions[$type]) ? $this->fieldType2widgetOptions[$type] : [];
-        $options = array_merge($typeOptions, $fieldOptions);
-
-        $publicProperties = $this->_receivePublicProperties($form, $model, $field);
-        $activeFieldOptions = $this->_splitOptions($options, $publicProperties);
-
         /*@var $control \yii\widgets\ActiveField */
-        $control = $form->field($model, $field, $activeFieldOptions);
-
+        $control = $form->field($model, $field, $fieldOptions);
         if (isset($this->fieldAddClass[$field])) {
             Html::addCssClass($control->options, $this->fieldAddClass[$field]);
         }
@@ -558,8 +560,12 @@ class Base extends \yii\base\Component
             $control->label($this->fieldLabels[$field]);
         }
 
-        $widget = isset($this->fieldType2widget[$type]) ? $this->fieldType2widget[$type] : null;
+        $widget = $this->fieldType2widget[$type]?? null;
         if ($widget) {
+            $widgetTypeOptions = $this->fieldType2widgetOptions[$type]?? [];
+            $widgetOptions = $this->fieldWidgetOptions[$field]?? [];
+            $options = ArrayHelper::merge($widgetTypeOptions, $widgetOptions);
+
             if ($isEnum) {
                 $options['items'] = $items;
             }
@@ -569,71 +575,28 @@ class Base extends \yii\base\Component
 
         $innerMethod = "_{$type}2string";
         if (method_exists($this, $innerMethod)) {
-            return $this->{$innerMethod}($control, $options);
+            return $this->{$innerMethod}($control, $methodOptions);
         }
 
-        $method = isset($this->fieldType2fieldMethod[$type]) ? $this->fieldType2fieldMethod[$type] : null;
+        $method = $this->fieldType2fieldMethod[$type]?? null;
         if ($isEnum && $method) {
-            return $control->{$method}($items, $options);
+            return $control->{$method}($items, $methodOptions);
         }
 
         if ($method) {
             if ('password' == $type) {
-                $options['autocomplete'] = 'off';
+                $methodOptions['autocomplete'] = 'off';
             }
 
-            return $control->{$method}($options);
+            return $control->{$method}($methodOptions);
         }
 
-        return $control->textInput($options);
+        return $control->textInput($methodOptions);
     }
 
-    protected function _splitOptions(&$options, $publicProperties)
+    protected function _hidden2string($control, $options)
     {
-        $activeFieldOptions = [];
-        foreach ($publicProperties as $option) {
-            if (array_key_exists($option, $options)) {
-                $activeFieldOptions[$option] = $options[$option];
-                unset($options[$option]);
-            }
-        }
-
-        return $activeFieldOptions;
-    }
-
-    protected function _receivePublicProperties($form, $model, $field)
-    {
-        $class = null;
-
-        $config = $form->fieldConfig;
-        if (is_array($config) && isset($config['class'])) {
-            $class = $config['class'];
-        } elseif ($config instanceof \Closure) {
-            $config = call_user_func($config, $model, $field);
-            $class = $config['class'];
-        } else {
-            $class = $form->fieldClass;
-        }
-
-        if (isset(self::$class2publicProperties[$class])) {
-            return self::$class2publicProperties[$class];
-        }
-
-        self::$class2publicProperties[$class] = [];
-
-        $ref = new ReflectionClass($class);
-        foreach ($ref->getProperties() as $property) {
-            if ($property->isPublic()) {
-                self::$class2publicProperties[$class][] = $property->name;
-            }
-        }
-
-        return self::$class2publicProperties[$class];
-    }
-
-    protected function _hidden2string($control)
-    {
-        return $control->hiddenInput()->parts['{input}'];
+        return $control->hiddenInput($options)->parts['{input}'];
     }
 
     protected function _staticControl2string($control, $options)
