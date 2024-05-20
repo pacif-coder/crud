@@ -18,6 +18,8 @@ class Delete extends SendFormButton
 
     public $icon = 'remove';
 
+    public $backUrl = true;
+
     public $confirmMessage;
 
     // disabled by default
