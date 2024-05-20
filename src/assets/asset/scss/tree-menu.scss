@@ -1,44 +1,72 @@
 .tree-menu {
-    a {
-        text-decoration: none;
 
-        &:active, &.active {
-            color: red
-        }
-    }
+    .node {
+        position: relative;
+        padding-left: 1em;
 
-    .nodes {
-        margin-left: 1em;
-    }
-
-    .no-nodes {
-        margin-left: 1em;
-    }
-
-    &.not-root > .nodes  {
-        margin-left: 0;
-    }
-
-    .collapsed, .expanded, &.collapsed, &.expanded {
-        .to-collapse, .to-expand {
-            display: none;
+        .exp-col {
+            position: absolute;
+            left: 0;
             cursor: pointer;
         }
-    }
 
-    .collapsed, &.collapsed {
-        & > .to-expand {
+        .tran {
             display: inline-block;
+            max-width: 100%;
+            box-sizing: border-box;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: -0.2em;
+
+            a {
+                text-decoration: none;
+                margin: 0em 0.3em 0em 0.3em;
+                line-height: 1;
+            }
         }
 
-        & > .nodes {display: none}
-    }
-
-    .expanded, &.expanded {
-        & > .to-collapse {
-            display: inline-block;
+        &.current > .tran, & > .tran:hover {
+            color: var(--bs-white);
+            border-radius: 5px;
         }
 
-        & > .nodes {display: block}
+        &.current > .tran > a, & > .tran:hover > a {
+            color: var(--bs-white);
+        }
+
+        &.current > .tran, & > .tran:hover {
+            background: var(--bs-cyan);
+        }
+
+        .exp-col > {
+            .to-col {
+                display: none;
+            }
+
+            .to-exp {
+                display: inline;
+            }
+        }
+
+        .children {
+            display: none;
+        }
+
+        &.open {
+            & > .exp-col > {
+                .to-col {
+                    display: inline;
+                }
+
+                .to-exp {
+                    display: none;
+                }
+            }
+
+            & > .children {
+                display: block;
+            }
+        }
     }
 }
