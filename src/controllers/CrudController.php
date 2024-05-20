@@ -10,11 +10,14 @@ use yii\web\NotFoundHttpException;
 use Crud\latte\CrudTemplateParameters;
 use Crud\latte\LatteRenderer;
 use Crud\helpers\ClassI18N;
-use Crud\helpers\ParentModel;
-use Crud\helpers\ModelName;
-use Crud\helpers\TitleHelper;
 use Crud\helpers\Html;
+use Crud\helpers\Lang;
+use Crud\helpers\ModelName;
+use Crud\helpers\ParentModel;
+use Crud\helpers\TitleHelper;
+
 use Crud\models\ModelWithParentInterface;
+use Crud\models\ActiveRecord;
 
 use ReflectionClass;
 
@@ -49,21 +52,7 @@ abstract class CrudController extends BaseController
 
     public function init()
     {
-        $this->fillModelClass();
-
-        if (!$this->modelClass) {
-            throw new InvalidConfigException('Not find model class');
-        }
-
         parent::init();
-
-        if (!$this->messageCategory) {
-            $this->messageCategory = ClassI18N::class2messagesPath($this->modelClass);
-        }
-
-        if (is_subclass_of($this->modelClass, ModelWithParentInterface::class)) {
-            $this->parentModelID = $this->getModelID();
-        }
 
         $this->fillTemplateFindPaths();
 
@@ -74,7 +63,38 @@ abstract class CrudController extends BaseController
         $this->templateParams = Yii::createObject(CrudTemplateParameters::class);
     }
 
-    public function fillModelClass()
+    public function beforeAction($action): bool
+    {
+        $r = parent::beforeAction($action);
+        if (!$r) {
+            return $r;
+        }
+
+        $modelClass = $this->getModelClass();
+        if (!$modelClass) {
+            throw new InvalidConfigException('Not find model class');
+        }
+
+        if (is_subclass_of($modelClass, ModelWithParentInterface::class)) {
+            $this->parentModelID = $this->getModelID();
+        }
+
+        $this->initMessageCategory();
+
+        return $r;
+    }
+
+    protected function getModelClass()
+    {
+        if ($this->modelClass) {
+            return $this->modelClass;
+        }
+
+        $this->fillModelClass();
+        return $this->modelClass;
+    }
+
+    protected function fillModelClass()
     {
         $name = Yii::$app->request->get('model-name');
         if (!$name || !isset(static::$modelName2modelClass[$name])) {
@@ -100,6 +120,21 @@ abstract class CrudController extends BaseController
         }
 
         $view->renderers['latte']['globalUseClass'] = $globalUse;
+    }
+
+    protected function initMessageCategory()
+    {
+        //  add crud as messageCategory ?
+        if ($this->messageCategory) {
+            return;
+        }
+
+        $modelClass = $this->getModelClass();
+        if (is_a($modelClass, ActiveRecord::class, true)) {
+            $this->messageCategory = $this->modelClass::getMessageCategory();
+        }
+
+        // add error?
     }
 
     protected function fillTemplateFindPaths()
@@ -162,6 +197,7 @@ abstract class CrudController extends BaseController
     {
         // build grid
         $this->templateParams->builder = $this->buildGrid();
+        $this->templateParams->model = $this->createModel();
 
         $this->createIndexTitle();
 
@@ -176,8 +212,7 @@ abstract class CrudController extends BaseController
             return;
         }
 
-        $model = $this->createModel();
-        $this->model2titleParams($model);
+        $this->model2titleParams($this->templateParams->model);
 
         $title = null;
         if (!$this->getModelID()) {
@@ -202,7 +237,7 @@ abstract class CrudController extends BaseController
         }
 
         $breadcrumbs = $this->getBreadcrumbs();
-        $breadcrumbs->createIndexBreadcrumbs($this->createModel());
+        $breadcrumbs->createIndexBreadcrumbs($this->templateParams->model);
         $this->templateParams->breadcrumbs = $breadcrumbs;
     }
 
@@ -229,7 +264,7 @@ abstract class CrudController extends BaseController
     }
 
     /**
-     * Create and edit object nodel
+     * Create and edit object model
      * @param string $id
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
@@ -249,14 +284,14 @@ abstract class CrudController extends BaseController
             return $this->goBack();
         }
 
-        $this->createEditTitle($isCreate, $model);
+        $this->createEditTitle($isCreate);
 
         $this->createEditBreadcrumbs($isCreate, $model);
 
         return $this->render('edit.latte', $this->templateParams);
     }
 
-    protected function createEditTitle($isCreate, $model)
+    protected function createEditTitle($isCreate)
     {
         if ($this->title) {
             return;
@@ -322,7 +357,9 @@ abstract class CrudController extends BaseController
             $model->save();
         }
 
-        return $this->goBack();
+        $get = $this->request->get();
+        $get[0] = 'index';
+        return $this->redirect($get);
     }
 
     protected function model2titleParams($model)
@@ -345,8 +382,10 @@ abstract class CrudController extends BaseController
     protected function createEditBreadcrumbs($isCreate, $model)
     {
         if (is_array($this->breadcrumbs)) {
-            $this->breadcrumbs['withBegin'] = (bool) $this->getModelID();
-            $this->breadcrumbs['lastUrl'] = $this->getBackUrl();
+            $this->breadcrumbs += [
+                'withBegin' => (bool) $this->getModelID(),
+                'lastUrl' => $this->getBackUrl(),
+            ];
         }
 
         $breadcrumbs = $this->getBreadcrumbs();
@@ -354,13 +393,10 @@ abstract class CrudController extends BaseController
         $this->templateParams->breadcrumbs = $breadcrumbs;
     }
 
-    public function getBreadcrumbs()
+    protected function createBreadcrumbs()
     {
-        if (is_object($this->breadcrumbs)) {
-            return $this->breadcrumbs;
-        }
-
-        return $this->breadcrumbs = Yii::createObject($this->breadcrumbs);
+        $this->breadcrumbs += ['messageCategory' => $this->messageCategory];
+        parent::createBreadcrumbs();
     }
 
     /**
