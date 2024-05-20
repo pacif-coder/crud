@@ -7,7 +7,8 @@ use yii\db\ActiveRecord;
 
 use Crud\builder\GridBuilder;
 
-class FilterModel extends DynamicModel {
+class FilterModel extends DynamicModel
+{
     /**
      * @var null|array
      *
@@ -21,11 +22,12 @@ class FilterModel extends DynamicModel {
     public $noApplyFilterAttrs = [];
     public $transformAttrMap = [];
 
-    protected $_model;
     protected $_formName;
+    protected $_modelTable;
     protected $_isLoaded;
 
-    public function builder2this(GridBuilder $builder) {
+    public function builder2this(GridBuilder $builder)
+    {
         $builderVars = array_keys(get_object_vars($builder));
         $thisVars = array_keys(get_object_vars($this));
         foreach (array_intersect($builderVars, $thisVars) as $param) {
@@ -50,7 +52,8 @@ class FilterModel extends DynamicModel {
         }
     }
 
-    public function setModel(Model $model) {
+    public function setModel(Model $model)
+    {
         $this->_formName = $model->formName();
         $this->_isLoaded = null;
 
@@ -60,16 +63,21 @@ class FilterModel extends DynamicModel {
             $filterAttrs = $this->filterAttrs;
         }
 
-        if ($this->filterOnlyIndexed && $model instanceof ActiveRecord) {
+        $isActiveRecord = $model instanceof ActiveRecord;
+        if ($isActiveRecord) {
+            $modelClass = get_class($model);
+            $this->_modelTable = $modelClass::tableName();
+        }
+
+        if ($this->filterOnlyIndexed && $isActiveRecord) {
             $indexed = [];
 
-            $modelClass = get_class($model);
-            $table = $modelClass::tableName();
-            foreach($modelClass::getDb()->getSchema()->getTableIndexes($table) as $indexes) {
+            $schema = $modelClass::getDb()->getSchema();
+            foreach($schema->getTableIndexes($this->_modelTable) as $indexes) {
                 $indexed = array_merge($indexed, $indexes->columnNames);
             }
 
-            foreach($modelClass::getDb()->getSchema()->getTableForeignKeys($table) as $indexes) {
+            foreach($schema->getTableForeignKeys($this->_modelTable) as $indexes) {
                 $indexed = array_merge($indexed, $indexes->columnNames);
             }
 
@@ -85,34 +93,37 @@ class FilterModel extends DynamicModel {
         }
     }
 
-    public function load($data, $formName = null) {
+    public function load($data, $formName = null)
+    {
         return $this->_isLoaded = parent::load($data, $formName);
     }
 
-    public function isLoaded() {
+    public function isLoaded()
+    {
         return $this->_isLoaded;
     }
 
-    public function filter($query) {
+    public function filter($query)
+    {
         foreach ($this->filterAttrs as $attr) {
             if (in_array($attr, $this->noApplyFilterAttrs)) {
                 continue;
             }
 
             $operator = isset($this->filterAttrOperator[$attr])? $this->filterAttrOperator[$attr] : '=';
-            if (isset($this->transformAttrMap[$attr])) {
-                $query->andFilterWhere([$operator, $this->transformAttrMap[$attr], $this->{$attr}]);
-            } else {
-                $query->andFilterWhere([$operator, $attr, $this->{$attr}]);
-            }
+            $condAttr = $this->transformAttrMap[$attr]?? $attr;
+
+            $query->andFilterWhere([$operator, $condAttr, $this->{$attr}]);
         }
     }
 
-    public function formName() {
+    public function formName()
+    {
         return $this->_formName;
     }
 
-    public function activeAttributes() {
+    public function activeAttributes()
+    {
         return $this->attributes();
     }
 }
