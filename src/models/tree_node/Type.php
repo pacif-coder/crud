@@ -50,7 +50,7 @@ implements \Crud\models\ModelWithNameAttrInterface
         }
 
         if ($exception404 && !isset(self::$type2name[$type])) {
-            throw new NotFoundHttpException("Type '{$type}' does not exist ");
+            throw new NotFoundHttpException("Type '{$type}' does not exist");
         }
     }
 
