@@ -26,13 +26,13 @@ class FileLoader extends \Latte\Loaders\FileLoader
 
     public function getReferredName($file, $referringFile): string
     {
-        if ($file && DIRECTORY_SEPARATOR == $file{0}) {
-            return $file;
-        }
+//        if ($file && DIRECTORY_SEPARATOR == $file{0}) {
+//            return $file;
+//        }
 
         $parent = parent::getReferredName($file, $referringFile);
         if ($referringFile != $parent && file_exists($parent) ) {
-            return $parent;
+//            return $parent;
         }
 
         $suffix = null;
@@ -56,9 +56,8 @@ class FileLoader extends \Latte\Loaders\FileLoader
             }
 
             if (file_exists($file)) {
-                return $file;
 //                Yii::info("$file $parent $referringFile");
-//                exit();
+                return $file;
             }
         }
 
