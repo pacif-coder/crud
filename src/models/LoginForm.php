@@ -23,7 +23,7 @@ class LoginForm extends Model
 
     public $userIdentityClass;
 
-    public $addBackUrl = true;
+    public $addBackUrl = false;
 
     protected $user = false;
 
