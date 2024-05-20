@@ -17,7 +17,7 @@ use Crud\grid\Dragable;
  *
  *
  */
-class GridView extends \yii\grid\GridView
+class GridView extends BaseGridView
 implements CopyMessageCategoryInterface
 {
     use GridViewTrait;
@@ -38,7 +38,10 @@ implements CopyMessageCategoryInterface
     public $dragableСlass = Dragable::class;
     public $dragableOptions = [];
 
-    public $renamedLink2ModelAttr = [];
+    public $surroundForm = true;
+    public $surroundFormAction = '';
+    public $surroundFormMethod = 'post';
+    public $surroundFormOptions = [];
 
     public function init()
     {
@@ -54,6 +57,7 @@ implements CopyMessageCategoryInterface
         $isGuessColumn = empty($this->columns);
 
         $addCheckboxColumn = $this->addCheckboxColumn;
+
         // If there is no direct order to add or not a column with checkbox, add it
         // yourself, if there are buttons working with this column
         if (null === $addCheckboxColumn) {
@@ -66,6 +70,10 @@ implements CopyMessageCategoryInterface
                 $checkboxColumn = ['class' => $this->checkboxColumn];
             } else {
                 $checkboxColumn = $this->checkboxColumn;
+            }
+
+            if (is_array($checkboxColumn) && !isset($checkboxColumn['class'])) {
+                $checkboxColumn['class'] = CheckboxColumn::class;
             }
 
             array_unshift($this->columns, $checkboxColumn);
