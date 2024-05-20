@@ -45,35 +45,6 @@ class BackUrlBehavior extends Behavior
         if (null !== $url) {
             return $url;
         }
-
-        $returnUrl = Yii::$app->user->returnUrl;
-        if ($returnUrl) {
-            return $returnUrl;
-        }
-
-        $url = $this->getHostInfo() . Yii::$app->request->getUrl();
-        $referer = Yii::$app->request->headers->get('referer');
-        if (null !== $referer) {
-            $refererBackup = $referer;
-            if ($this->ignoreScheme) {
-                $url = strstr($url, '://');
-                $referer = strstr($referer, '://');
-            }
-
-            if ($url != $referer) {
-                return $refererBackup;
-            }
-        }
-
-        $session = Yii::$app->session;
-        if (!$session->isActive) {
-            return;
-        }
-
-        $stack = $session->get($this->getSessionParam());
-        if (null !== $stack) {
-            return $stack['prev'];
-        }
     }
 
     public static function addBackUrl($urlTo, $hash = null)
@@ -133,7 +104,6 @@ class BackUrlBehavior extends Behavior
     {
         return [
             Controller::EVENT_BEFORE_ACTION => 'setReturnUrl',
-            Controller::EVENT_AFTER_ACTION => 'saveUrl',
         ];
     }
 
@@ -143,32 +113,6 @@ class BackUrlBehavior extends Behavior
         if (null !== $url) {
             Yii::$app->user->setReturnUrl($url);
         }
-    }
-
-    public function saveUrl()
-    {
-        $session = Yii::$app->session;
-        if (!$session->isActive) {
-            return;
-        }
-
-        $url = Yii::$app->request->getUrl();
-        $param = $this->getSessionParam();
-        $stack = $session->get($param);
-        if (null === $stack) {
-            $stack = [];
-            $stack['current'] = $url;
-            $stack['prev'] = Yii::$app->request->headers->get('referer');
-            $session->set($param, $stack);
-        }
-
-        if ($stack['current'] == $url) {
-            return;
-        }
-
-        $stack['prev'] = $stack['current'];
-        $stack['current'] = $url;
-        $session->set($param, $stack);
     }
 
     /**
@@ -194,10 +138,5 @@ class BackUrlBehavior extends Behavior
 
         $postInfo = ':' . $post;
         return substr($hostInfo, 0, -strlen($postInfo));
-    }
-
-    protected function getSessionParam()
-    {
-        return '_' . self::class . '-' . self::BACK_URL_PARAM;
     }
 }
