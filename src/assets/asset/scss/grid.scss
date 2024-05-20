@@ -102,8 +102,23 @@
         text-overflow: ellipsis;
     }
 
+    .action-link-column-with-second-link {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .bi {
+            margin-left: 0.5rem;
+        }
+    }
+
     @for $i from 1 through 40 {
         .truncate-text-#{$i * 10} {max-width: #{$i * 10}px;}
+    }
+
+    [data-role='drag-icon'] {
+        cursor: grab;
+        cursor: move;
     }
 }
 

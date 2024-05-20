@@ -51,18 +51,16 @@ form {
         input[type="radio"], input[type="checkbox"] {margin-right: 5px;}
     }
 
-    .form-group {
-        &.short textarea {
-            min-height: 100px;
-        }
+    .short textarea {
+        min-height: 100px;
+    }
 
-        &.medium textarea {
-            min-height: 250px;
-        }
+    .medium textarea {
+        min-height: 250px;
+    }
 
-        &.high textarea {
-            min-height: 500px;
-        }
+    .high textarea {
+        min-height: 500px;
     }
 }
 
