@@ -6,18 +6,25 @@ use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 
 use Crud\behaviors\BackUrlBehavior;
+use Crud\helpers\ChildeClass;
 use Crud\helpers\ClassI18N;
 use Crud\helpers\Lang;
 use Crud\helpers\ModelName;
 use Crud\helpers\ParentModel;
 use Crud\models\ModelWithParentInterface;
 
+use Crud\models\tree_node\Type;
+
 /**
  *
  */
 class Breadcrumbs extends \yii\base\BaseObject
 {
-    public $withHome = true;
+    public $withHomeIcon = true;
+
+    public $links = [];
+
+    public $withType;
 
     public $withBegin;
 
@@ -29,7 +36,7 @@ class Breadcrumbs extends \yii\base\BaseObject
 
     public $removeParams = [];
 
-    public $links = [];
+    public $messageCategory;
 
     protected $urlParams;
 
@@ -51,18 +58,16 @@ class Breadcrumbs extends \yii\base\BaseObject
         }
 
         if ($this->withBegin) {
-            $modelData = $this->model2data($model);
-
             // the first and last link - are the same thing
             if ($this->lastUrl && !$parents) {
                 $url = $this->lastUrl;
             } else {
-                $url = $this->getUrlToModel($modelData, true);
+                $urlParams = $this->initUrlParams();
+                $this->dropParamInFirstUrl($urlParams);
+                $url = Url::toRoute($urlParams);
             }
 
-            $messageCategory = ClassI18N::class2messagesPath($modelData['class']);
-            $label = Lang::t($messageCategory, 'Top list items');
-
+            $label = Lang::t($this->messageCategory, 'Top list items');
             $this->addLink($url, $label);
         }
 
@@ -70,7 +75,7 @@ class Breadcrumbs extends \yii\base\BaseObject
         $lastIndex = key($parents);
         foreach ($parents as $i => $modelData) {
             if ($lastIndex != $i) {
-                $this->modelData2breadcrumbs($modelData);
+                $this->parentModelData2breadcrumbs($modelData);
                 continue;
             }
 
@@ -81,38 +86,51 @@ class Breadcrumbs extends \yii\base\BaseObject
             if ($this->lastUrl) {
                 $this->addLink($this->lastUrl, $modelData['name']);
             } else {
-                $this->modelData2breadcrumbs($modelData);
+                $this->parentModelData2breadcrumbs($modelData);
             }
         }
 
         return $this->links;
     }
 
-    public function modelData2breadcrumbs($modelData, $dropID = false)
+    public function parentModelData2breadcrumbs($modelData)
     {
-        $url = $this->getUrlToModel($modelData, $dropID);
+        $urlParams = $this->class2urlParams($modelData['class']);
+
+        $urlParams['id'] = $modelData['id'];
+
+        if ($this->withType) {
+            $childeClass = ChildeClass::getChildeClass($modelData['model']);
+            $urlParams['type'] = Type::getTypeByClass($childeClass);
+        }
+
+        $url = Url::toRoute($urlParams);
         $this->addLink($url, $modelData['name']);
     }
 
-    public function getUrlToModel($modelData, $dropID = false, $params = [])
+    public function class2urlParams($class)
     {
         $urlParams = $this->initUrlParams();
-        if (!$dropID) {
-            $urlParams['id'] = $modelData['id'];
-        } elseif (isset($urlParams['id'])) {
-            unset($urlParams['id']);
-        }
 
         if (Yii::$app->has('class2controller')) {
-            $controller = Yii::$app->class2controller->getController($modelData['class']);
+            $controller = Yii::$app->class2controller->getController($class);
             if ($controller) {
                 $urlParams[0] = "{$controller}/{$urlParams[0]}";
             }
         }
 
-        $urlParams = ArrayHelper::merge($urlParams, $params);
+        return $urlParams;
+    }
 
-        return Url::toRoute($urlParams);
+    protected function dropParamInFirstUrl(&$urlParams)
+    {
+        if (isset($urlParams['id'])) {
+            unset($urlParams['id']);
+        }
+
+        if ($this->withType && isset($urlParams['type'])) {
+            unset($urlParams['type']);
+        }
     }
 
     public function addLink($url, $label)
@@ -120,15 +138,6 @@ class Breadcrumbs extends \yii\base\BaseObject
         $this->links[] = (object) [
             'url' => $url,
             'label' => $label,
-        ];
-    }
-
-    protected function model2data($model)
-    {
-        return [
-            'class' => get_class($model),
-            'name' => ModelName::getName($model),
-            'id' => $model->id,
         ];
     }
 
@@ -159,10 +168,5 @@ class Breadcrumbs extends \yii\base\BaseObject
         $urlParams[0] = 'index';
 
         return $this->urlParams = $urlParams;
-    }
-
-    public function getBreadcrumbs()
-    {
-        return $this->links;
     }
 }
