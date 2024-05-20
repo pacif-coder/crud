@@ -9,6 +9,11 @@ use yii\helpers\Inflector;
  */
 class ClassI18N
 {
+    public static function class2messagesCategory($class)
+    {
+        return static::class2messagesPath($class);
+    }
+
     public static function class2messagesPath($class)
     {
         $pos = strrpos($class, '\\');
