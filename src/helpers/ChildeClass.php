@@ -26,7 +26,7 @@ class ChildeClass
         }
 
         if (!is_a($modelClass, ActiveRecord::class, true)) {
-            throw new Exception('fds');
+            throw new Exception('Unsupport not ActiveRecord class');
         }
 
         $class = $modelClass::CHILD_CLASS;

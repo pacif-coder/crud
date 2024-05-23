@@ -33,7 +33,7 @@ class Lang
                 }
             }
 
-            return $tMessage;
+            return $stabTMessage;
         }
 
         if (self::isCategoryExist($category)) {
