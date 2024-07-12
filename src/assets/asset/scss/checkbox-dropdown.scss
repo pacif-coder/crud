@@ -1,0 +1,84 @@
+@import "bs_functions";
+@import "bs_variables";
+
+.checkbox-dropdown {
+    position: relative;
+    min-height: $input-line-height * 1rem + 2.5 * $input-padding-y;
+
+    > .form-control {
+        background: none;
+        background-color: $dropdown-bg;
+        padding-right: 0;
+
+        .toggle {
+            background-color: $form-select-bg;
+            background-image: escape-svg($form-select-indicator);
+            background-repeat: no-repeat;
+            background-position: $form-select-bg-position;
+            background-size: $form-select-bg-size;
+            cursor: pointer;
+            min-height: $input-line-height * 1em;
+            padding-right: 2em;
+
+            [data-role="emptyLabel"] {
+                --bs-text-opacity: .5;
+            }
+
+            span {
+                [data-role="del"] {
+                    padding-left: 0.2em;
+                    padding-right: 1em;
+                }
+            }
+        }
+
+        .radios {
+            background-color: $form-select-bg;
+            display: none;
+            max-height: 200px;
+            overflow-y: scroll;
+            padding: 0 0 0 $input-btn-focus-width;
+            margin: $input-padding-y 0 0 -1*$input-btn-focus-width;
+
+            label {
+                cursor: pointer;
+            }
+        }
+    }
+
+    &.short .form-control .radios {
+        max-height: 100px;
+    }
+
+    &.medium .form-control .radios {
+        max-height: 250px;
+    }
+
+    &.high .form-control .radios {
+        max-height: 500px;
+    }
+
+    &.open {
+        z-index: $zindex-dropdown;
+
+        > .form-control {
+            position: absolute;
+            top: 0;
+
+            color: $input-focus-color;
+            background-color: $input-focus-bg;
+            border-color: $input-focus-border-color;
+
+            @if $enable-shadows {
+              @include box-shadow($input-box-shadow, $input-focus-box-shadow);
+            } @else {
+              // Avoid using mixin so we can pass custom focus shadow properly
+              box-shadow: $input-focus-box-shadow;
+            }
+        }
+
+        .radios {
+            display: block;
+        }
+    }
+}
