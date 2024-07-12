@@ -145,12 +145,6 @@ class Base extends \yii\base\Component
         }
     }
 
-    protected function _filterStatic($class, $prefix = 'fb_')
-    {
-        $ref = new ReflectionClass($class);
-        return $this->_filterByPrefix($ref->getStaticProperties(), $prefix);
-    }
-
     public function static2this($class, $prefix = 'fb_')
     {
         $array = $this->_filterStatic($class);
@@ -184,6 +178,12 @@ class Base extends \yii\base\Component
                 $this->{$param} = $array[$param];
             }
         }
+    }
+
+    protected function _filterStatic($class, $prefix = 'fb_')
+    {
+        $ref = new ReflectionClass($class);
+        return $this->_filterByPrefix($ref->getStaticProperties(), $prefix);
     }
 
     protected function _filterByPrefix($array, $prefix = null)
