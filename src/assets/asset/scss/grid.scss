@@ -91,7 +91,10 @@
     }
 
     @for $i from 1 through 40 {
-        .column-width-#{$i * 10} {width: #{$i * 10}px;}
+        .column-width-#{$i * 10} {
+            width: #{$i * 10}px;
+            max-width: #{$i * 10}px;
+        }
     }
 
     .truncate-text {
