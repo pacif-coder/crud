@@ -83,6 +83,7 @@ class GridBuilder extends Base
     public $filterOnlyIndexed = true;
     public $noApplyFilterAttrs = [];
     public $transformAttrMap = [];
+    public $forceFilterFormName;
 
     public $autoJoin = true;
 

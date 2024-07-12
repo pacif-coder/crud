@@ -4,6 +4,7 @@ namespace Crud\grid;
 use yii\base\DynamicModel;
 use yii\base\Model;
 use yii\db\ActiveRecord;
+use yii\db\QueryInterface;
 
 use Crud\builder\GridBuilder;
 
@@ -21,6 +22,7 @@ class FilterModel extends DynamicModel
     public $filterOnlyIndexed = true;
     public $noApplyFilterAttrs = [];
     public $transformAttrMap = [];
+    public $forceFilterFormName;
 
     protected $_formName;
     protected $_modelTable;
@@ -103,7 +105,7 @@ class FilterModel extends DynamicModel
         return $this->_isLoaded;
     }
 
-    public function filter($query)
+    public function filter(QueryInterface $query)
     {
         foreach ($this->filterAttrs as $attr) {
             if (in_array($attr, $this->noApplyFilterAttrs)) {
@@ -112,13 +114,23 @@ class FilterModel extends DynamicModel
 
             $operator = isset($this->filterAttrOperator[$attr])? $this->filterAttrOperator[$attr] : '=';
             $condAttr = $this->transformAttrMap[$attr]?? $attr;
+            $val = $this->{$attr};
 
-            $query->andFilterWhere([$operator, $condAttr, $this->{$attr}]);
+
+            if ('=' == $operator && is_array($val)) {
+                $operator = 'IN';
+            }
+
+            $query->andFilterWhere([$operator, $condAttr, $val]);
         }
     }
 
     public function formName()
     {
+        if ($this->forceFilterFormName) {
+            return $this->forceFilterFormName;
+        }
+
         return $this->_formName;
     }
 
