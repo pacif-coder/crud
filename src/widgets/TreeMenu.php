@@ -7,7 +7,7 @@ use yii\helpers\Json;
 
 use Crud\helpers\ChildeClass;
 use Crud\helpers\ParentModel;
-use Crud\models\tree_node\Type;
+use Crud\models\Type;
 use Crud\widgets\assets\TreeMenuAsset;
 use Crud\models\ModelWithParentInterface;
 
