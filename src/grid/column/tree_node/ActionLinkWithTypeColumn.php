@@ -6,7 +6,7 @@ use yii\data\ActiveDataProvider;
 use yii\db\ActiveQuery;
 
 use Crud\helpers\ChildeClass;
-use Crud\models\tree_node\Type;
+use Crud\models\Type;
 
 /**
  *
