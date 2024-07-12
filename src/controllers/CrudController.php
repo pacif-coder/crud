@@ -9,9 +9,7 @@ use yii\web\NotFoundHttpException;
 
 use Crud\latte\CrudTemplateParameters;
 use Crud\latte\LatteRenderer;
-use Crud\helpers\ClassI18N;
-use Crud\helpers\Html;
-use Crud\helpers\Lang;
+use Crud\helpers\Html as BaseHtmlHelper;
 use Crud\helpers\ModelName;
 use Crud\helpers\ParentModel;
 use Crud\helpers\TitleHelper;
@@ -22,47 +20,70 @@ use Crud\models\ActiveRecord;
 use ReflectionClass;
 
 /**
- * Default controller for the CRUD module
- *
+ * Abstract base controller for managing CRUD operations.
+ * This class provides a framework for creating, reading, updating, and deleting models.
  */
 abstract class CrudController extends BaseController
 {
+    /**
+     * @var string Class for the model this controller manages
+     */
     public $modelClass;
+
+    // Layout for rendering views, set to false to disable layouts
+    public $layout = false;
+
+    // Mapping of model names to their corresponding class names
+    public $modelName2modelClass = [];
 
     public $parentModelID;
 
-    public $layout = false;
-
-    protected static $modelName2modelClass = [];
-
+    // Parameters for setting the page title
     protected $titleParams = [];
 
     /**
-     * @var CrudTemplateParameters
+     * @var CrudTemplateParameters Parameters for rendering templates with Latte
      */
     protected $templateParams;
 
+    // Global classes used in the template rendering
     protected $globalUseClass = [];
 
+    // Default classes used globally in template rendering
     protected $defaultGlobalUseClass = [
-        TitleHelper::class => 'TitleHelper',
-        Html::class,
+        TitleHelper::class,
         Url::class,
     ];
 
+    /**
+     * Initializes the controller.
+     * Sets up paths for finding templates and global classes used in rendering.
+     */
     public function init()
     {
         parent::init();
 
+        // Configure the paths to search for templates
         $this->fillTemplateFindPaths();
 
+        // Set up global classes used in Latte template rendering
         $this->fillTemplateGlobalUseClass();
 
+        // Configure a fake theme for Latte renderer
         $this->mapFakeTheme();
 
+        // Create template parameters object for rendering
         $this->templateParams = Yii::createObject(CrudTemplateParameters::class);
     }
 
+    /**
+     * Performs actions before executing the requested action.
+     * Validates the model class and checks for necessary configurations.
+     *
+     * @param \yii\base\Action $action The action to be executed
+     * @return bool Whether the action should continue to run
+     * @throws InvalidConfigException if the model class is not set
+     */
     public function beforeAction($action): bool
     {
         $r = parent::beforeAction($action);
@@ -70,40 +91,83 @@ abstract class CrudController extends BaseController
             return $r;
         }
 
+        // Ensure that the model class is set
         $modelClass = $this->getModelClass();
         if (!$modelClass) {
-            throw new InvalidConfigException('Not find model class');
+            throw new InvalidConfigException('Model class not found');
         }
 
         if (is_subclass_of($modelClass, ModelWithParentInterface::class)) {
             $this->parentModelID = $this->getModelID();
         }
 
-        $this->initMessageCategory();
-
         return $r;
     }
 
-    protected function getModelClass()
+    /**
+     * Retrieves the class name of the model managed by this controller.
+     * If not set, it tries to determine the class based on the request parameters.
+     *
+     * @return string|null The class name of the model, or null if not found
+     */
+    public function getModelClass()
     {
-        if ($this->modelClass) {
+        if (null !== $this->modelClass) {
             return $this->modelClass;
         }
 
+        // Determine the model class from request parameters
         $this->fillModelClass();
+        if (!$this->modelClass) {
+            return $this->modelClass = false;
+        }
+
+        // Initialize message category for translations
+        $this->initMessageCategory();
+
         return $this->modelClass;
     }
 
+    /**
+     * Sets the model class based on the 'model-name' parameter in the request.
+     */
     protected function fillModelClass()
     {
-        $name = Yii::$app->request->get('model-name');
-        if (!$name || !isset(static::$modelName2modelClass[$name])) {
-            return ;
+        if (!$this->hasModelNameInGet()) {
+            return;
         }
 
-        $this->modelClass = static::$modelName2modelClass[$name];
+        $name = $this->getModelName();
+        if (!isset($this->modelName2modelClass[$name])) {
+            return;
+        }
+
+        $this->modelClass = $this->modelName2modelClass[$name];
     }
 
+    /**
+     * Checks if the 'model-name' parameter is present in the request.
+     *
+     * @return bool Whether the 'model-name' parameter is present
+     */
+    protected function hasModelNameInGet()
+    {
+        return $this->getModelName() !== null;
+    }
+
+    /**
+     * Retrieves the 'model-name' parameter from the request.
+     *
+     * @return string|null The model name from the request, or null if not present
+     */
+    protected function getModelName()
+    {
+        return $this->request->get('model-name');
+    }
+
+    /**
+     * Sets up the global classes used in Latte template rendering.
+     */
     protected function fillTemplateGlobalUseClass()
     {
         $view = $this->getView();
@@ -111,32 +175,46 @@ abstract class CrudController extends BaseController
             return;
         }
 
+        // Merge default global classes with custom ones
         $globalUse = [];
         $merged = array_merge($this->defaultGlobalUseClass, $this->globalUseClass);
+
+        // special case - use different versions of Bootstrap
+        $htmlClass = BaseHtmlHelper::getBootstrapClass('Html');
+        $merged[$htmlClass] = 'Html';
+
         foreach ($merged as $key => $name) {
             if (!is_int($key) || !in_array($name, $globalUse)) {
                 $globalUse[$key] = $name;
             }
         }
 
+        // Assign global classes to the Latte renderer
         $view->renderers['latte']['globalUseClass'] = $globalUse;
     }
 
+    /**
+     * Initializes the message category for translations.
+     * This is typically set to the category defined in the model.
+     */
     protected function initMessageCategory()
     {
-        //  add crud as messageCategory ?
+        // If message category is already set, do nothing
         if ($this->messageCategory) {
             return;
         }
 
         $modelClass = $this->getModelClass();
         if (is_a($modelClass, ActiveRecord::class, true)) {
-            $this->messageCategory = $this->modelClass::getMessageCategory();
+            $this->messageCategory = $modelClass::getMessageCategory();
         }
 
         // add error?
     }
 
+    /**
+     * Configures paths where Latte templates can be found.
+     */
     protected function fillTemplateFindPaths()
     {
         $view = $this->getView();
@@ -144,16 +222,24 @@ abstract class CrudController extends BaseController
             return;
         }
 
+        // Set Latte renderer class and template directories
         $view->renderers['latte']['class'] = LatteRenderer::class;
         $view->renderers['latte']['options']['templateDirs'] = $this->getTemplateFindPaths();
     }
 
+    /**
+     * Retrieves the paths where templates should be searched for.
+     * This method collects paths from the current class hierarchy.
+     *
+     * @return array The list of template paths
+     */
     protected function getTemplateFindPaths()
     {
         $templatePaths = [
             $this->getViewPath(),
         ];
 
+        // Traverse the class hierarchy to find additional template paths
         $ref = new ReflectionClass($this);
         $class = $ref->getParentClass()->name;
         while ($class) {
@@ -173,6 +259,9 @@ abstract class CrudController extends BaseController
         return $templatePaths;
     }
 
+    /**
+     * Sets up a fake theme to map template paths for the Latte renderer.
+     */
     protected function mapFakeTheme()
     {
         $templateFindPaths = $this->getTemplateFindPaths();
@@ -190,22 +279,30 @@ abstract class CrudController extends BaseController
     }
 
     /**
-     * Show model objects list
-     * @return string
+     * Displays a list of model objects.
+     * Builds a grid for the model list and renders it.
+     *
+     * @return string The rendered index view
      */
     public function actionIndex()
     {
-        // build grid
+        // Prepare parameters for the index view
         $this->templateParams->builder = $this->buildGrid();
         $this->templateParams->model = $this->createModel();
 
+        // Create title and breadcrumbs for the index page
         $this->createIndexTitle();
 
         $this->createIndexBreadcrumbs();
 
+        // Render the index view
         return $this->render('index.latte', $this->templateParams);
     }
 
+    /**
+     * Creates the title for the index page.
+     * Sets the title based on the model and its attributes.
+     */
     protected function createIndexTitle()
     {
         if ($this->title) {
@@ -230,6 +327,10 @@ abstract class CrudController extends BaseController
         $this->title = $title;
     }
 
+    /**
+     * Creates breadcrumbs for the index page.
+     * Sets breadcrumbs based on the model's hierarchy.
+     */
     protected function createIndexBreadcrumbs()
     {
         if (is_array($this->breadcrumbs)) {
@@ -242,36 +343,40 @@ abstract class CrudController extends BaseController
     }
 
     /**
-     * Creates a new model.
-     * If creation is successful, the browser will be redirected to the 'back' url page.
-     * @return mixed
+     * Creates a new model object.
+     * Redirects to the 'back' URL upon successful creation.
+     *
+     * @return mixed The response after creating the model
      */
     public function actionCreate()
     {
-        return $this->_actionEdit(true);
+        return $this->_actionEdit('create');
     }
 
     /**
      * Updates an existing model object.
-     * If update is successful, the browser will be redirected to the 'back' url page.
-     * @param string $id
-     * @return mixed
+     * Redirects to the 'back' URL upon successful update.
+     *
+     * @param string $id The ID of the model to update
+     * @return mixed The response after updating the model
      * @throws NotFoundHttpException if the model cannot be found
      */
     public function actionUpdate()
     {
-        return $this->_actionEdit(false);
+        return $this->_actionEdit('update');
     }
 
     /**
-     * Create and edit object model
-     * @param string $id
-     * @return mixed
+     * Handles the creation and editing of a model object.
+     * Determines whether the operation is a create or update and processes accordingly.
+     *
+     * @param bool $isCreate Whether the operation is to create a new model
+     * @return mixed The response after processing the model
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function _actionEdit($isCreate)
+    protected function _actionEdit($action)
     {
-        $model = $isCreate ? $this->createModel() : $this->findModel();
+        $model = $this->getModelByAction($action);
         $this->templateParams->model = $model;
 
         $this->model2titleParams($model);
@@ -284,20 +389,31 @@ abstract class CrudController extends BaseController
             return $this->goBack();
         }
 
-        $this->createEditTitle($isCreate);
+        $this->createEditTitle($action);
 
-        $this->createEditBreadcrumbs($isCreate, $model);
+        $this->createEditBreadcrumbs($action, $model);
 
         return $this->render('edit.latte', $this->templateParams);
     }
 
-    protected function createEditTitle($isCreate)
+    public function getModelByAction($action)
+    {
+        return 'create' == $action? $this->createModel() : $this->findModel();
+    }
+
+    /**
+     * Creates the title for the edit page.
+     * Sets the title based on whether the operation is create or update.
+     *
+     * @param bool $isCreate Whether the operation is to create a new model
+     */
+    protected function createEditTitle($action)
     {
         if ($this->title) {
             return;
         }
 
-        if ($isCreate) {
+        if ('create' == $action) {
             $this->title = $this->t('Create item', $this->titleParams);
         } elseif (isset($this->titleParams['nameAttribute'])) {
             $this->title = $this->t('Update item "{nameAttribute}"', $this->titleParams);
@@ -307,8 +423,10 @@ abstract class CrudController extends BaseController
     }
 
     /**
-     * Sort
-     * @return mixed
+     * Sorts the list of model objects based on the provided order.
+     * Reorders the models and updates their sort attributes.
+     *
+     * @return mixed The response after sorting the models
      */
     public function actionSort()
     {
@@ -323,14 +441,15 @@ abstract class CrudController extends BaseController
             $begin = $pagination->getOffset();
         }
 
-        $sortAttr = $this->modelClass::ORDER_ATTR;
-        $maxSort = $this->modelClass::find()->addSelect("max([[{$sortAttr}]])")->scalar();
+        $modelClass = $this->getModelClass();
+        $sortAttr = $modelClass::ORDER_ATTR;
+        $maxSort = $modelClass::find()->addSelect("max([[{$sortAttr}]])")->scalar();
 
-        // the value of the sort attribute must be unique - so move the objects to
-        // the end first, and then put them in the right position
+        // Move objects to the end first, then position them correctly
+	// The value of the sort attribute must be unique
         $moved = [];
-        $idKey = current($this->modelClass::primaryKey());
-        foreach ($this->modelClass::findAll($sort) as $model) {
+        $idKey = current($modelClass::primaryKey());
+        foreach ($modelClass::findAll($sort) as $model) {
             $id = $model->{$idKey};
             $index = array_search($id, $sort);
 
@@ -346,7 +465,7 @@ abstract class CrudController extends BaseController
             $moved[$id] = $pos;
         }
 
-        foreach ($this->modelClass::findAll(array_keys($moved)) as $model) {
+        foreach ($modelClass::findAll(array_keys($moved)) as $model) {
             $id = $model->{$idKey};
             $pos = $moved[$id];
             if ($pos == $model->{$sortAttr}) {
@@ -362,6 +481,12 @@ abstract class CrudController extends BaseController
         return $this->redirect($get);
     }
 
+    /**
+     * Maps model attributes to title parameters.
+     * Extracts attributes such as name and parent model for use in titles.
+     *
+     * @param \yii\db\ActiveRecord $model The model object
+     */
     protected function model2titleParams($model)
     {
         $this->titleParams = [];
@@ -379,7 +504,14 @@ abstract class CrudController extends BaseController
         }
     }
 
-    protected function createEditBreadcrumbs($isCreate, $model)
+    /**
+     * Creates breadcrumbs for the edit page.
+     * Sets breadcrumbs based on the model's attributes and operation type.
+     *
+     * @param bool $action
+     * @param \yii\db\ActiveRecord $model The model object
+     */
+    protected function createEditBreadcrumbs($action, $model)
     {
         if (is_array($this->breadcrumbs)) {
             $this->breadcrumbs += [
@@ -393,6 +525,10 @@ abstract class CrudController extends BaseController
         $this->templateParams->breadcrumbs = $breadcrumbs;
     }
 
+    /**
+     * Creates general breadcrumbs for the page.
+     * Adds the message category to the breadcrumbs.
+     */
     protected function createBreadcrumbs()
     {
         $this->breadcrumbs += ['messageCategory' => $this->messageCategory];
@@ -408,10 +544,24 @@ abstract class CrudController extends BaseController
      */
     public function actionDelete()
     {
-        $selection = $this->request->post('selection', []);
+        $selection = $this->getSelection();
+        if (!$selection) {
+            return $this->goBack();
+        }
 
-        $modelClass = $this->modelClass;
-        foreach ($modelClass::findAll($selection) as $model) {
+        $modelClass = $this->getModelClass();
+        $primaryKey = $modelClass::primaryKey();
+        $where = [
+            $primaryKey[0] => $this->getSelection(),
+        ];
+
+        $parentAttr = ParentModel::getParentModelAttr($modelClass, false);
+        if ($parentAttr) {
+            $where[$parentAttr] = $this->parentModelID;
+        }
+
+        $query = $modelClass::find()->where($where);
+        foreach ($query->all() as $model) {
             /* @var $model \yii\db\ActiveRecord */
             $model->delete();
             if (!$model->hasErrors()) {
@@ -426,6 +576,19 @@ abstract class CrudController extends BaseController
     }
 
     /**
+     * Retrieves the 'selection' data from the POST request.
+     *
+     * This method fetches the 'selection' data from the POST request,
+     * defaulting to an empty array if 'selection' is not set.
+     *
+     * @return array The 'selection' data from the POST request.
+     */
+    public function getSelection()
+    {
+        return $this->request->post('selection', []);
+    }
+
+    /**
      * Finds the model based on its primary key value.
      *
      * If the model is not found, a 404 HTTP exception will be thrown.
@@ -435,7 +598,8 @@ abstract class CrudController extends BaseController
      */
     protected function findModel($exception404 = true)
     {
-        return $this->_findModel($this->modelClass, $this->getModelID(), $exception404);
+        $modelClass = $this->getModelClass();
+        return $this->_findModel($modelClass, $this->getModelID(), $exception404);
     }
 
     /**
@@ -445,7 +609,7 @@ abstract class CrudController extends BaseController
      */
     protected function createModel()
     {
-        $model = Yii::createObject($this->modelClass);
+        $model = Yii::createObject($this->getModelClass());
 
         $parentModelAttr = ParentModel::getParentModelAttr($model);
         if ($parentModelAttr) {
@@ -455,6 +619,11 @@ abstract class CrudController extends BaseController
         return $model;
     }
 
+    /**
+     * Retrieves the ID of the model from the request parameters.
+     *
+     * @return string|null The model ID from the request, or null if not present
+     */
     public function getModelID()
     {
         return $this->request->get('id');
