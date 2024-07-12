@@ -13,7 +13,7 @@ use Crud\helpers\ModelName;
 use Crud\helpers\ParentModel;
 use Crud\models\ModelWithParentInterface;
 
-use Crud\models\tree_node\Type;
+use Crud\models\Type;
 
 /**
  *
