@@ -6,7 +6,7 @@ use Yii;
 use Crud\grid\column\tree_node\ActionLinkWithTypeColumn;
 use Crud\helpers\ModelName;
 use Crud\models\tree_node\Folder;
-use Crud\models\Type;
+use Crud\models\ClassType;
 use Crud\widgets\TreeMenu;
 
 use Exception;
@@ -127,7 +127,7 @@ class TreeCrudController extends CrudController
         }
 
         // Set the model class based on the type
-        $this->modelClass = Type::getClassByType($type);
+        $this->modelClass = ClassType::getClassByType($type);
     }
 
     /**
@@ -152,8 +152,8 @@ class TreeCrudController extends CrudController
         $gridBuilder->editColumnClass = $this->editColumnClass;
 
         $modelClass = $this->getModelClass();
-        $type = Type::getTypeByClass($modelClass);
-        $action = Type::isFolderByType($type)? 'index' : 'update';
+        $type = ClassType::getTypeByClass($modelClass);
+        $action = ClassType::isFolderByType($type)? 'index' : 'update';
         $nameAttr = ModelName::getNameAttr($modelClass);
 
         // Set the default action for the name attribute column if not already set
