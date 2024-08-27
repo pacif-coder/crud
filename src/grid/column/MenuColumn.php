@@ -5,8 +5,9 @@ use Yii;
 use yii\helpers\ArrayHelper;
 
 use Crud\controls\Base;
-
 use Crud\grid\toolbar\Link;
+
+use Closure;
 
 /**
  *
@@ -72,6 +73,10 @@ implements \Crud\controls\CopyMessageCategoryInterface
 
         if (is_string($item)) {
             $item = ['action' => $item];
+        }
+
+        if (is_callable($item) || $item instanceof Closure) {
+            $item = call_user_func($item, $key, $this);
         }
 
         if (!isset($item['class'])) {
