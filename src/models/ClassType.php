@@ -1,19 +1,18 @@
 <?php
-namespace Crud\models\tree_node;
+namespace Crud\models;
 
 use yii\web\NotFoundHttpException;
 
 /**
- * This is the model class for table "tree_node_type".
+ * This is the model class for table "class_type".
  *
  * @property int $id
  * @property string $name
  * @property string $code
  * @property string $class
  * @property bool $is_folder
- *
  */
-class Type extends \yii\db\ActiveRecord
+class ClassType extends \yii\db\ActiveRecord
 implements \Crud\models\ModelWithNameAttrInterface
 {
     const NAME_ATTR = 'name';
@@ -26,20 +25,31 @@ implements \Crud\models\ModelWithNameAttrInterface
 
     protected static $type2name;
 
-    public static function getTypeByClass($objectOrClass)
+    public static function getTypeByClass($objectOrClass, $exception404 = true)
     {
         if (is_object($objectOrClass)) {
             $objectOrClass = get_class($objectOrClass);
         }
 
         self::_load();
-        return array_search($objectOrClass, self::$type2class);
+        $type = array_search($objectOrClass, self::$type2class);
+        if (false === $type && $exception404) {
+            throw new NotFoundHttpException("Class '{$objectOrClass}' does not exist in type list");
+        }
+
+        return $type;
     }
 
-    public static function getTypeByCode($code)
+    public static function getTypeByCode($code, $exception404 = true)
     {
         self::_load();
-        return array_search($code, self::$type2code);
+        $type = array_search($code, self::$type2code);
+
+        if ($exception404 && false === $type) {
+            throw new NotFoundHttpException("Class with code '{$code}' does not exist in type list");
+        }
+
+        return $type;
     }
 
     public static function isFolderByType($type, $exception404 = true)
@@ -50,7 +60,7 @@ implements \Crud\models\ModelWithNameAttrInterface
         }
 
         if ($exception404 && !isset(self::$type2name[$type])) {
-            throw new NotFoundHttpException("Type '{$type}' does not exist");
+            throw new NotFoundHttpException("Type '{$type}' does not exist in type list");
         }
     }
 
@@ -62,7 +72,7 @@ implements \Crud\models\ModelWithNameAttrInterface
         }
 
         if ($exception404 && !isset(self::$type2name[$type])) {
-            throw new NotFoundHttpException("Type '{$type}' does not exist ");
+            throw new NotFoundHttpException("Type '{$type}' does not exist in type list");
         }
     }
 
@@ -74,7 +84,7 @@ implements \Crud\models\ModelWithNameAttrInterface
         }
 
         if ($exception404 && !isset(self::$type2name[$type])) {
-            throw new NotFoundHttpException("Type '{$type}' does not exist ");
+            throw new NotFoundHttpException("Type '{$type}' does not exist in type list");
         }
     }
 
@@ -86,7 +96,7 @@ implements \Crud\models\ModelWithNameAttrInterface
         }
 
         if ($exception404 && !isset(self::$type2name[$type])) {
-            throw new NotFoundHttpException("Type '{$type}' does not exist ");
+            throw new NotFoundHttpException("Type '{$type}' does not exist in type list");
         }
     }
 
@@ -144,6 +154,6 @@ implements \Crud\models\ModelWithNameAttrInterface
      */
     public static function tableName()
     {
-        return 'tree_node_type';
+        return 'class_type';
     }
 }
