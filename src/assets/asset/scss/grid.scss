@@ -115,7 +115,7 @@
         }
     }
 
-    @for $i from 1 through 40 {
+    @for $i from 1 through 80 {
         .truncate-text-#{$i * 10} {max-width: #{$i * 10}px;}
     }
 
