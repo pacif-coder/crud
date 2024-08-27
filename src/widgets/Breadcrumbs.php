@@ -13,7 +13,7 @@ use Crud\helpers\ModelName;
 use Crud\helpers\ParentModel;
 use Crud\models\ModelWithParentInterface;
 
-use Crud\models\Type;
+use Crud\models\ClassType;
 
 /**
  *
@@ -101,7 +101,7 @@ class Breadcrumbs extends \yii\base\BaseObject
 
         if ($this->withType) {
             $childeClass = ChildeClass::getChildeClass($modelData['model']);
-            $urlParams['type'] = Type::getTypeByClass($childeClass);
+            $urlParams['type'] = ClassType::getTypeByClass($childeClass);
         }
 
         $url = Url::toRoute($urlParams);
