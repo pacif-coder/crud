@@ -5,8 +5,8 @@ use Yii;
 use yii\helpers\Url;
 use yii\base\Model;
 
-use Crud\helpers\Lang;
 use Crud\behaviors\BackUrlBehavior;
+use Crud\helpers\Lang;
 
 /**
  * LoginForm is the model behind the login form.
@@ -51,9 +51,10 @@ class LoginForm extends Model
      */
     public function rules()
     {
+        $category = static::getMessageCategory();
         return [
-            ['username', 'required', 'message' => Lang::t($this, 'Username cannot be blank')],
-            ['password', 'required', 'message' => Lang::t($this, 'Password cannot be blank')],
+            ['username', 'required', 'message' => Lang::t($category, 'Username cannot be blank')],
+            ['password', 'required', 'message' => Lang::t($category, 'Password cannot be blank')],
             ['rememberMe', 'boolean'],
             ['password', 'validatePassword'],
         ];
@@ -72,7 +73,8 @@ class LoginForm extends Model
             return;
         }
 
-        $error = Lang::t($this, 'Incorrect username or password');
+        $category = static::getMessageCategory();
+        $error = Lang::t($category, 'Incorrect username or password');
         $user = $this->getUser();
         if (!$user) {
             $this->addError($attribute, $error);
@@ -99,17 +101,15 @@ class LoginForm extends Model
             return false;
         }
 
-        return Yii::$app->user->login($this->getUser(), $this->rememberMe ? 3600 * 24 * 30 : 0);
+        return Yii::$app->user->login($this->getUser(), $this->getDuration());
     }
 
-    public function getAction()
+    /**
+     *
+     */
+    public function getDuration()
     {
-        $params = [''];
-        if ($this->addBackUrl) {
-            $params[BackUrlBehavior::BACK_URL_PARAM] = $this->getBackUrl();
-        }
-
-        return Url::to($params);
+        return $this->rememberMe ? 3600 * 24 * 30 : 0;
     }
 
     /**
@@ -130,10 +130,16 @@ class LoginForm extends Model
     public function attributeLabels()
     {
         $list = [];
+        $category = static::getMessageCategory();
         foreach (array_merge($this->attributes(), ['loginSubmit']) as $attribute) {
-            $list[$attribute] = Lang::t($this, $attribute);
+            $list[$attribute] = Lang::t($category, $attribute);
         }
 
         return $list;
+    }
+
+    public static function getMessageCategory()
+    {
+        return Lang::getParentCategorysByRel(static::class, 'models');
     }
 }
