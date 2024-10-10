@@ -6,7 +6,7 @@ use yii\data\ActiveDataProvider;
 use yii\db\ActiveQuery;
 
 use Crud\helpers\ChildeClass;
-use Crud\models\Type;
+use Crud\models\ClassType;
 
 /**
  *
@@ -41,7 +41,7 @@ class ActionLinkWithTypeColumn extends \Crud\grid\column\ActionLinkColumn
 
             $class = ChildeClass::getChildeClass($class, $modelData);
         }
-        $params['type'] = Type::getTypeByClass($class);
+        $params['type'] = ClassType::getTypeByClass($class);
 
         return $params;
     }
