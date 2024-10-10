@@ -47,6 +47,9 @@ form {
     }
 
     fieldset legend {
+        border-bottom: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+        margin-top: 1em;
+
         .btn {margin-left: 5px;}
         input[type="radio"], input[type="checkbox"] {margin-right: 5px;}
     }
@@ -82,28 +85,6 @@ form {
 
     .dropzone-inner img {
         width: 100px;
-    }
-}
-
-.file-upload-control {
-    padding-top: 9px;
-}
-
-.widget-file-input {
-    input[type="file"] {
-        display: inline-block;
-    }
-
-    span {
-        cursor: pointer;
-    }
-
-    a {
-        display: inline-block;
-        margin-right: 10px;
-        margin-bottom: 10px;
-
-        &.drop {text-decoration: line-through}
     }
 }
 
