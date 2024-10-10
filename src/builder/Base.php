@@ -115,6 +115,9 @@ class Base extends \yii\base\Component
     protected static $class2dbColumns = [];
     protected static $class2publicProperties = [];
 
+    // Static variable to cache driver names for different model classes
+    protected static $class2driverName = [];
+
     protected $_isExtraControlCreated = false;
     protected $_extraControlVar;
     protected $_extraControlDefPlace;
@@ -225,6 +228,23 @@ class Base extends \yii\base\Component
 
         self::$class2dbColumns[$class] = $class::getTableSchema()->columns;
         return self::$class2dbColumns[$class];
+    }
+
+    /**
+     * Method to get the driver name for a given ActiveRecord class
+     * and cache it in a static variable.
+     *
+     * @param string $modelClass The name of the ActiveRecord class.
+     * @return string The driver name.
+     */
+    public function getDriverName($modelClass)
+    {
+        if (!isset(self::$class2driverName[$modelClass])) {
+            // get the driver name from the database connection
+            self::$class2driverName[$modelClass] = $modelClass::getDb()->driverName;
+        }
+
+        return self::$class2driverName[$modelClass];
     }
 
     protected function initValidators($model)
