@@ -16,6 +16,7 @@ class FilterModel extends DynamicModel
      * Also, if [[label]] is not specified, the label associated with the attribute will be displayed.
      */
     public $filterAttrs;
+    public $filterAttr2table;
     public $addFilterAttrs = [];
     public $removeFilterAttrs = [];
     public $filterAttrOperator = [];
@@ -116,9 +117,12 @@ class FilterModel extends DynamicModel
             $condAttr = $this->transformAttrMap[$attr]?? $attr;
             $val = $this->{$attr};
 
-
             if ('=' == $operator && is_array($val)) {
                 $operator = 'IN';
+            }
+
+            if (isset($this->filterAttr2table[$attr])) {
+                $condAttr = '{{' . $this->filterAttr2table[$attr] . '}}.[[' . $condAttr . ']]';
             }
 
             $query->andFilterWhere([$operator, $condAttr, $val]);
