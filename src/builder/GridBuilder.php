@@ -77,6 +77,7 @@ class GridBuilder extends Base
     public $filterInGrid = true;
 
     public $filterAttrs;
+    public $filterAttr2table = [];
     public $addFilterAttrs = [];
     public $removeFilterAttrs = [];
     public $filterAttrOperator = [];
@@ -84,6 +85,8 @@ class GridBuilder extends Base
     public $noApplyFilterAttrs = [];
     public $transformAttrMap = [];
     public $forceFilterFormName;
+
+    public $with;
 
     public $autoJoin = true;
 
@@ -179,6 +182,7 @@ class GridBuilder extends Base
         }
 
         $this->insertColumns();
+        $this->with();
         $this->joinWith();
 
         foreach ($this->columns as $column => $desc) {
@@ -269,7 +273,7 @@ class GridBuilder extends Base
                 case 'char':
                 case 'string':
                 case 'text':
-                    $this->filterAttrOperator[$attr] = 'like';
+                    $this->filterAttrOperator[$attr] = 'ilike';
                     break;
             }
         }
@@ -573,6 +577,16 @@ class GridBuilder extends Base
         }
     }
 
+    protected function with()
+    {
+        if (!$this->with) {
+            return;
+        }
+
+        $query = $this->getQuery();
+        $query->with($this->with);
+    }
+
     protected function autoJoin()
     {
         if (!$this->autoJoin) {
@@ -748,12 +762,17 @@ class GridBuilder extends Base
         if (isset($dbColumns[$attr])) {
             $column = $dbColumns[$attr];
 
-            /**@var $column \yii\db\ColumnSchema  **/
+            /** @var $column \yii\db\ColumnSchema **/
             switch ($column->type) {
+                // in postgresql timestamp -> datetime
+                case 'timestamp':
+                    if ('pgsql' == $this->getDriverName($this->modelClass)) {
+                        return 'datetime';
+                    }
+
                 case 'datetime':
                 case 'date':
                 case 'time':
-                case 'timestamp':
                 case 'decimal':
                 case 'integer':
                     return $column->type;
