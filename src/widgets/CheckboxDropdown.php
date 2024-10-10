@@ -36,6 +36,7 @@ class CheckboxDropdown extends \yii\widgets\InputWidget
     protected static $radiosAttrs = [
         'class' => 'radios',
         'data-role' => 'radios',
+        'unselect' => '',
     ];
 
     protected static $toggleAttrs = [
@@ -71,9 +72,6 @@ class CheckboxDropdown extends \yii\widgets\InputWidget
         $htmlClass = Html::getBootstrapClass('Html');
 
         $radiosAttrs = static::$radiosAttrs;
-        if ($this->withHidden) {
-            $radiosAttrs['unselect'] = '';
-        }
         $str .= $htmlClass::activeCheckboxList($this->model, $this->attribute, $this->items, $radiosAttrs);
 
         $attrs = $this->options;
@@ -109,7 +107,6 @@ class CheckboxDropdown extends \yii\widgets\InputWidget
 
     public static function getMessageCategory()
     {
-        $classes = Lang::regClassPref(static::class, 'widgets');
-        return Lang::classes2messagesCategory($classes);
+        return Lang::getParentCategorysByRel(static::class, 'widgets');
     }
 }

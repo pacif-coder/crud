@@ -36,7 +36,7 @@
             background-color: $form-select-bg;
             display: none;
             max-height: 200px;
-            overflow-y: scroll;
+            overflow-y: auto;
             padding: 0 0 0 $input-btn-focus-width;
             margin: $input-padding-y 0 0 -1*$input-btn-focus-width;
 

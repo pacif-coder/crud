@@ -5,6 +5,7 @@ $(document).ready(function () {
         var toggle = control.find('[data-role="toggle"]');
         var radios = control.find('[data-role="radios"]');
         var emptyLabel = toggle.find('[data-role="emptyLabel"]');
+        let preventSendChange = true;
 
         function toggleEmptyLabel()
         {
@@ -23,6 +24,29 @@ $(document).ready(function () {
 
             toggleEmptyLabel();
 
+//            radios.find(':checkbox:first-child').trigger('change');
+        }
+
+        function checkChange()
+        {
+            if (control.hasClass('open')) {
+                return;
+            }
+
+            let isChange = false;
+            radios.find(':checkbox').each(function() {
+                let checkbox = $(this);
+                let isChecked = checkbox.is(':checked');
+                if (checkbox.data('isChecked') != isChecked) {
+                    isChange = true;
+                }
+            });
+
+            if (!isChange) {
+                return;
+            }
+
+            preventSendChange = false;
             radios.find(':checkbox:first-child').trigger('change');
         }
 
@@ -33,16 +57,18 @@ $(document).ready(function () {
 
         toggleEmptyLabel();
         $('div', radios).each(function() {
-            var div = $(this);
+            let div = $(this);
 
-            var label = div.find('label');
-            var labelText = label.text();
+            let label = div.find('label');
+            let labelText = label.text();
 
-            var span = $('<span>').text(labelText);
+            let span = $('<span>').text(labelText);
             span.attr('data-input-id', label.attr('for'));
             span.append('<sup class="bi bi-x-lg text-danger" data-role="del"></sup>');
 
-            var isChecked = div.find(':checkbox').is(':checked');
+            let checkbox = div.find(':checkbox');
+            let isChecked = checkbox.is(':checked');
+            checkbox.data('isChecked', isChecked);
             if (!isChecked) {
                 span.addClass('d-none');
             }
@@ -50,8 +76,10 @@ $(document).ready(function () {
             toggle.append(span);
         });
 
-        $(':checkbox', radios).on('click', function(event) {
-            event.stopPropagation();
+        $(':checkbox', radios).on('change', function(event) {
+            if (preventSendChange) {
+                event.stopPropagation();
+            }
 
             var id = $(this).attr('id');
             toggleTextInSelection(id, $(this).is(':checked'));
@@ -65,12 +93,19 @@ $(document).ready(function () {
             radios.find(checkbox).prop('checked', false);
 
             toggleTextInSelection(id, false);
+            if (control.hasClass('open')) {
+                return;
+            }
+
+            preventSendChange = false;
+            radios.find(':checkbox:first-child').trigger('change');
         });
 
         toggle.on('click', function(event) {
             event.stopPropagation();
 
             control.toggleClass('open');
+            checkChange();
         });
 
         $('body').on('click', function(event) {
@@ -79,11 +114,13 @@ $(document).ready(function () {
             }
 
             control.removeClass('open');
+            checkChange();
         });
 
         $(document).on('keydown', function(event) {
             if (event.key === "Escape" || event.keyCode === 27) {
                 control.removeClass('open');
+                checkChange();
             }
         });
     });
