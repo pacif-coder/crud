@@ -113,6 +113,15 @@ class Html extends \yii\helpers\Html
         return $lines;
     }
 
+    public static function toggleCssClass(&$options, $class, $isAdd)
+    {
+        if ($isAdd) {
+            static::addCssClass($options, $class);
+        } else {
+            static::removeCssClass($options, $class);
+        }
+    }
+
     public static function icon($icon, $class = '', $attrs = [])
     {
         if (5 == self::getBootstrapVersion()) {
