@@ -234,7 +234,7 @@ class Base extends \yii\base\Component
         }
 
         $this->validatorts = [];
-        foreach ($model->getActiveValidators() as $validator) {
+        foreach ($model->getValidators() as $validator) {
             /*@var $validator \yii\validators\Validator */
             foreach ($validator->getAttributeNames() as $attr) {
                 $this->validatorts[$attr][] = $validator;
