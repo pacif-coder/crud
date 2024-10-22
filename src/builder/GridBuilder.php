@@ -744,12 +744,43 @@ class GridBuilder extends Base
 
     protected function getColumnFormat($attr)
     {
+        $format = $this->_getColumnFormat($attr);
+
+        // enum value in column
+        if (!isset($this->enumOptions[$attr])) {
+            return $format;
+        }
+
+        $model = $this->_createTmpModel();
+        $this->initEnumOptionsByDesc($model, $attr);
+        $options = $this->enumOptions[$attr];
+        $emptyLabel = $this->emptyEnumOptionLabel;
+
+        return function ($value, $formatter) use ($options, $emptyLabel, $format) {
+            if (is_array($value)) {
+                $selected = [];
+                foreach ($value as $key) {
+                    if (isset($options[$key])) {
+                        $selected[] = $options[$key];
+                    }
+                }
+
+                $value = $selected;
+            } else {
+                $value = isset($options[$value])? $options[$value] : $emptyLabel;
+            }
+
+            return $formatter->format($value, $format);
+        };
+    }
+
+    protected function _getColumnFormat($attr)
+    {
         if (isset($this->columnFormats[$attr])) {
             return $this->columnFormats[$attr];
         }
 
         $model = $this->_createTmpModel();
-
         $format = $this->getControlTypeByValidator($model, $attr);
         switch ($format) {
             case 'email':
@@ -782,18 +813,6 @@ class GridBuilder extends Base
                     return 'ntext';
                     break;
             }
-        }
-
-        // enum value in column
-        if (isset($this->enumOptions[$attr])) {
-            $this->initEnumOptionsByDesc($model, $attr);
-            $options = $this->enumOptions[$attr];
-            $emptyLabel = $this->emptyEnumOptionLabel;
-
-            return function ($value, $formatter) use ($options, $emptyLabel) {
-                $value = isset($options[$value])? $options[$value] : $emptyLabel;
-                return $formatter->asText($value);
-            };
         }
 
         return 'text';
