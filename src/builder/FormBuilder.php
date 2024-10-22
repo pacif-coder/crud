@@ -207,16 +207,6 @@ class FormBuilder extends Base
         }
     }
 
-    public function isAddEmptyEnumOption($attr)
-    {
-        if (!$this->addEmptyEnumOption) {
-            return false;
-        }
-
-        $type = $this->fieldTypes[$attr];
-        return in_array($type, ['select', 'dropDownList']);
-    }
-
     protected function getType($attr, $model)
     {
         $this->inspectAttr($attr, $model);

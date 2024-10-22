@@ -72,7 +72,19 @@ class Base extends \yii\base\Component
     public $enumFields;
     public $enumOptions;
     public $translationEnumOptions = [];
+
+    /**
+     * Adds an empty option with [emptyEnumOptionLabel] text at the beginning of drop-down lists.
+     * Can be a boolean value or an array
+     * If boolean value - works for all attributes, if array - interpreted as a dictionary
+     * of attributes
+     *
+     * @see isAddEmptyEnumOption
+     *
+     * @var bool|array
+     */
     public $addEmptyEnumOption = true;
+
     public $emptyEnumOptionLabel = '---';
 
     public $messageCategory;
@@ -338,6 +350,20 @@ class Base extends \yii\base\Component
         foreach ($targetModelClass::find()->orderBy($nameAttr)->all() as $targetModel) {
             $options[$targetModel->{$targetModelAttr}] = $targetModel->{$nameAttr};
         }
+    }
+
+    public function isAddEmptyEnumOption($attr)
+    {
+        if (!$this->addEmptyEnumOption) {
+            return false;
+        }
+
+        if (is_array($this->addEmptyEnumOption) && isset($this->addEmptyEnumOption[$attr])) {
+            return $this->addEmptyEnumOption[$attr];
+        }
+
+        $type = $this->fieldTypes[$attr];
+        return in_array($type, ['select', 'dropDownList']);
     }
 
     protected function _checkBuilded()
