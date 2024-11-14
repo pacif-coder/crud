@@ -113,7 +113,7 @@ abstract class BaseController extends \yii\web\Controller
     /**
      * @return FormBuilder
      */
-    protected function getFromBuilder($withController = true)
+    public function getFromBuilder($withController = true)
     {
         if ($this->formBuilder) {
             return $this->formBuilder;
@@ -130,7 +130,7 @@ abstract class BaseController extends \yii\web\Controller
     /**
      * @return FormBuilder
      */
-    protected function buildForm($model, $withController = true)
+    public function buildForm($model, $withController = true)
     {
         $builder = $this->getFromBuilder($withController);
 
@@ -151,7 +151,7 @@ abstract class BaseController extends \yii\web\Controller
     /**
      * @return GridBuilder
      */
-    protected function buildGrid($withController = true)
+    public function buildGrid($withController = true)
     {
         $builder = $this->getGridBuilder($withController);
 
@@ -172,7 +172,7 @@ abstract class BaseController extends \yii\web\Controller
     /**
      * @return GridBuilder
      */
-    protected function getGridBuilder($withController = true)
+    public function getGridBuilder($withController = true)
     {
         if ($this->gridBuilder) {
             return $this->gridBuilder;
