@@ -3,8 +3,11 @@ namespace Crud\builder;
 
 use Yii;
 use yii\base\Event;
+use yii\base\Model;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
+use yii\widgets\ActiveForm;
+
 use yii\validators\BooleanValidator;
 use yii\validators\FileValidator;
 use yii\validators\ExistValidator;
@@ -538,7 +541,7 @@ class Base extends \yii\base\Component
      * Create string represention of form fields
      * @return string
      */
-    public function fields2string($fields, $form, $model)
+    public function fields2string($fields, ActiveForm $form, Model $model)
     {
         $str = '';
         foreach ($fields as $field) {
@@ -551,7 +554,7 @@ class Base extends \yii\base\Component
      * Create string represention of form field
      * @return string
      */
-    public function field2string($field, \yii\widgets\ActiveForm $form, $model)
+    public function field2string($field, ActiveForm $form, Model $model)
     {
         $type = $this->fieldTypes[$field]?? null;
         switch ($type) {
@@ -585,7 +588,7 @@ class Base extends \yii\base\Component
             }
 
             // special case - enum data is output only for reads
-            if ($isEnum && !array_key_exists('value', $fieldOptions)) {
+            if ($isEnum && !array_key_exists('value', $fieldOptions) && $model->hasProperty($field)) {
                 $value = $items[$model->{$field}]?? '';
                 $methodOptions['value'] = $value;
                 $type = 'staticControl';
