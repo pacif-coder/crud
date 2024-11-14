@@ -5,8 +5,8 @@ use Yii;
 use yii\db\ActiveRecord;
 use yii\base\ModelEvent;
 
+use Crud\helpers\ParentModel;
 use Crud\models\ModelWithOrderInterface;
-use Crud\models\ModelWithParentInterface;
 
 /**
  * Behavior initializes the value of the sort attribute, putting
@@ -47,8 +47,8 @@ class SortInit extends \yii\base\Behavior
         }
 
         $query = $class::find();
-        if (is_a($this->owner, ModelWithParentInterface::class)) {
-            $parentAttr = $class::PARENT_MODEL_ATTR;
+        $parentAttr = ParentModel::getParentModelAttr($this->owner);
+        if ($parentAttr) {
             $where = [$parentAttr => $this->owner->{$parentAttr}];
             $query->where($where);
         }

@@ -20,11 +20,13 @@ use Exception;
  *
  */
 class ActiveRecord extends \Crud\models\ActiveRecord
-implements Models\ModelWithOrderInterface
+implements Models\ModelWithOrderInterface, Models\ModelWithParentInterface
 {
     const ORDER_ATTR = 'sort';
 
     const CHILD_CLASS = null;
+
+    const PARENT_MODEL_ATTR = null;
 
     public function behaviors()
     {
@@ -112,8 +114,9 @@ implements Models\ModelWithOrderInterface
 
         // path by unique
         $attrs = ['path'];
-        if ($this instanceof Models\ModelWithParentInterface) {
-            $attrs[] = ParentModel::getParentModelAttr($this);
+        $parentAttr = ParentModel::getParentModelAttr($this);
+        if ($parentAttr) {
+            $attrs[] = $parentAttr;
         }
 
         $rules['pathUnique'] = ['path', 'unique', 'targetAttribute' => $attrs];

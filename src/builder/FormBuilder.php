@@ -5,6 +5,7 @@ use Yii;
 use yii\base\Model;
 use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
+use yii\widgets\ActiveForm as BaseActiveForm;
 
 use Crud\builder\Base;
 use Crud\helpers\Enum;
@@ -12,7 +13,6 @@ use Crud\helpers\Html;
 use Crud\helpers\Lang;
 use Crud\helpers\ParentModel;
 use Crud\models\ModelWithOrderInterface;
-use Crud\models\ModelWithParentInterface;
 use Crud\widgets\ActiveForm;
 use Crud\widgets\ActiveFormBootstrap5;
 
@@ -122,14 +122,14 @@ class FormBuilder extends Base
                 $this->fields = array_diff($this->fields, $order);
             }
 
-            if ($this->removeParentField && $model instanceof ModelWithParentInterface) {
-                $parentAttr = ParentModel::getParentModelAttr($model);
+            if ($this->removeParentField && ($parentAttr = ParentModel::getParentModelAttr($model))) {
                 $this->fields = array_diff($this->fields, [$parentAttr]);
             }
 
             $this->fields = array_diff($this->fields, $this->removeFields);
             foreach ($this->addFieldsAfter as $afterField => $fields) {
                 if (!in_array($afterField, $this->fields)) {
+                    $this->fields = array_merge($this->fields, $fields);
                     continue;
                 }
 
@@ -268,7 +268,7 @@ class FormBuilder extends Base
         return $notInFieldSets;
     }
 
-    public function fieldsBeforeFieldsetLegend2string($fieldset, $form, $model)
+    public function fieldsBeforeFieldsetLegend2string($fieldset, BaseActiveForm $form, Model $model)
     {
         if (!isset($this->fieldset2fields[$fieldset]) || !isset($this->fieldsBeforeFieldsetLegend[$fieldset])) {
             return '';
@@ -278,7 +278,7 @@ class FormBuilder extends Base
         return $this->_fieldsInput2string($fields, $form, $model);
     }
 
-    public function fieldsAfterFieldsetLegend2string($fieldset, $form, $model)
+    public function fieldsAfterFieldsetLegend2string($fieldset, BaseActiveForm $form, Model $model)
     {
         if (!isset($this->fieldset2fields[$fieldset]) || !isset($this->fieldsAfterFieldsetLegend[$fieldset])) {
             return '';
@@ -288,7 +288,7 @@ class FormBuilder extends Base
         return $this->_fieldsInput2string($fields, $form, $model);
     }
 
-    protected function _fieldsInput2string($fields, $form, $model)
+    protected function _fieldsInput2string($fields, BaseActiveForm $form, Model $model)
     {
         $str = '';
         foreach ($fields as $field) {

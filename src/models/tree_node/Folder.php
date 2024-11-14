@@ -12,8 +12,6 @@ implements WithPathInterface
 
     const CHILD_CLASS = null;
 
-//    const PARENT_MODEL_ATTR = 'parent_id';
-
     /**
      * Имя таблицы в базе данных
      */

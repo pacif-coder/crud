@@ -19,7 +19,6 @@ use Crud\helpers\ModelName;
 use Crud\helpers\Enum;
 use Crud\helpers\ParentModel;
 use Crud\models\ModelWithOrderInterface;
-use Crud\models\ModelWithParentInterface;
 
 /**
  * XXX
@@ -241,9 +240,8 @@ class GridBuilder extends Base
             $this->columns[] = ['class' => DragIconColumn::class];
         }
 
-        if ($this->removeParentColumn && is_a($this->modelClass, ModelWithParentInterface::class, true)) {
-            $parentAttr = ParentModel::getParentModelAttr($this->modelClass);
-            if ($parentAttr && isset($this->columns[$parentAttr])) {
+        if ($this->removeParentColumn && ($parentAttr = ParentModel::getParentModelAttr($this->modelClass))) {
+            if (isset($this->columns[$parentAttr])) {
                 unset($this->columns[$parentAttr]);
             }
         }

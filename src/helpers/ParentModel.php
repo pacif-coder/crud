@@ -25,7 +25,7 @@ class ParentModel
         $modelClass = get_class($model);
         $attr = self::getParentModelAttr($model);
         if (!$attr) {
-            throw new Exception("Class '{$modelClass}' do not have parent attr");
+            return [];
         }
 
         $modelParentClass = self::getParentModelClass($model);
@@ -48,6 +48,10 @@ class ParentModel
 
             // get parent model ID
             $attr = self::getParentModelAttr($model);
+            if (!$attr) {
+                break;
+            }
+
             $parentID = $model->{$attr};
             if (!$parentID) {
                 break;
@@ -76,9 +80,13 @@ class ParentModel
         return self::$parents[$modelParentClass][$modelParentID] = array_reverse($list);
     }
 
-    public static function getParentID(Model $model, $raiseException = true)
+    public static function getParentID(Model $model)
     {
-        $attr = self::getParentModelAttr($model, $raiseException);
+        $attr = self::getParentModelAttr($model);
+        if (!$attr) {
+            throw new Exception("Not have parent attr in class '{$class}'");
+        }
+
         if (!$model->hasProperty($attr)) {
             $class = get_class($model);
             throw new Exception("Not have attr '{$attr}' in class '{$class}'");
@@ -87,7 +95,7 @@ class ParentModel
         return $model->{$attr};
     }
 
-    public static function getParentModelAttr($modelClass, $raiseException = true)
+    public static function getParentModelAttr($modelClass)
     {
         if (is_object($modelClass)) {
             $modelClass = get_class($modelClass);
@@ -101,16 +109,11 @@ class ParentModel
             return self::$class2parentModelAttr[$modelClass] = null;
         }
 
-        $attr = null;
-        if (defined("$modelClass::PARENT_MODEL_ATTR")) {
-            $attr = $modelClass::PARENT_MODEL_ATTR;
-        }
-
-        if (!$attr && $raiseException) {
+        if (!defined("$modelClass::PARENT_MODEL_ATTR")) {
             throw new Exception("Not find parent attr in class '{$modelClass}'");
         }
 
-        return self::$class2parentModelAttr[$modelClass] = $attr;
+        return self::$class2parentModelAttr[$modelClass] = $modelClass::PARENT_MODEL_ATTR;;
     }
 
     public static function getParentModelClass($model)
