@@ -15,7 +15,11 @@ class LogoutAction extends \yii\base\Action
      */
     public function run()
     {
+        $returnUrl = Yii::$app->user->getReturnUrl();
+
+        Yii::$app->session->destroy();
         Yii::$app->user->logout();
-        return $this->controller->goHome();
+
+        return $this->controller->redirect($returnUrl);
     }
 }
