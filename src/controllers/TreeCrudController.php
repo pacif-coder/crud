@@ -3,6 +3,7 @@ namespace Crud\controllers;
 
 use Yii;
 
+use Crud\action\TreeMenuBranchLoadAction;
 use Crud\grid\column\tree_node\ActionLinkWithTypeColumn;
 use Crud\helpers\ModelName;
 use Crud\models\tree_node\Folder;
@@ -73,6 +74,20 @@ class TreeCrudController extends CrudController
         $this->globalUseClass = array_merge($this->globalUseClass, $this->treeCrudUseClass);
 
         parent::init();
+    }
+
+    /**
+     *
+     * @return array
+     */
+    public function actions()
+    {
+        $actions = parent::actions();
+        $actions['tree-menu-branch-load'] = [
+            'class' => TreeMenuBranchLoadAction::class,
+        ];
+
+        return $actions;
     }
 
     /**

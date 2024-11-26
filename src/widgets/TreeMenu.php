@@ -7,7 +7,7 @@ use yii\helpers\Json;
 
 use Crud\helpers\ChildeClass;
 use Crud\helpers\ParentModel;
-use Crud\models\Type;
+use Crud\models\ClassType;
 use Crud\widgets\assets\TreeMenuAsset;
 use Crud\models\ModelWithParentInterface;
 
@@ -20,7 +20,7 @@ class TreeMenu extends \yii\base\Widget
 
     public $asset = TreeMenuAsset::class;
 
-    public $source = 'name-index';
+    public $source = 'tree-menu-branch-load';
 
     public $attrs = [
         'class' => 'tree-menu',
@@ -78,7 +78,7 @@ HTML;
             foreach ($parentInTree as $treeModelDesc) {
                 $id = $treeModelDesc['id'];
                 $childeClass = ChildeClass::getChildeClass($treeModelDesc['model']);
-                $type = Type::getTypeByClass($childeClass);
+                $type = ClassType::getTypeByClass($childeClass);
                 $parents[] = ['id' => $id, 'type' => $type];
             }
         }
