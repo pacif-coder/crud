@@ -555,7 +555,7 @@ abstract class CrudController extends BaseController
             $primaryKey[0] => $this->getSelection(),
         ];
 
-        $parentAttr = ParentModel::getParentModelAttr($modelClass, false);
+        $parentAttr = ParentModel::getParentModelAttr($modelClass);
         if ($parentAttr) {
             $where[$parentAttr] = $this->parentModelID;
         }
