@@ -38,13 +38,13 @@ abstract class CrudController extends BaseController
 
     public $parentModelID;
 
-    // Parameters for setting the page title
-    protected $titleParams = [];
-
     /**
      * @var CrudTemplateParameters Parameters for rendering templates with Latte
      */
-    protected $templateParams;
+    public $templateParams;
+
+    // Parameters for setting the page title
+    protected $titleParams = [];
 
     // Global classes used in the template rendering
     protected $globalUseClass = [];
@@ -112,18 +112,17 @@ abstract class CrudController extends BaseController
      */
     public function getModelClass()
     {
-        if (null !== $this->modelClass) {
-            return $this->modelClass;
+        // Determine the model class from request parameters
+        if (null === $this->modelClass) {
+            $this->fillModelClass();
         }
 
-        // Determine the model class from request parameters
-        $this->fillModelClass();
         if (!$this->modelClass) {
             return $this->modelClass = false;
         }
 
         // Initialize message category for translations
-        $this->initMessageCategory();
+        $this->modelClass2messageCategory($this->modelClass);
 
         return $this->modelClass;
     }
@@ -194,17 +193,18 @@ abstract class CrudController extends BaseController
     }
 
     /**
-     * Initializes the message category for translations.
+     * Initialization category message to translate from the model
+     * class, if it is not defined
+     *
      * This is typically set to the category defined in the model.
      */
-    protected function initMessageCategory()
+    protected function modelClass2messageCategory($modelClass)
     {
         // If message category is already set, do nothing
         if ($this->messageCategory) {
             return;
         }
 
-        $modelClass = $this->getModelClass();
         if (is_a($modelClass, ActiveRecord::class, true)) {
             $this->messageCategory = $modelClass::getMessageCategory();
         }
@@ -288,7 +288,7 @@ abstract class CrudController extends BaseController
     {
         // Prepare parameters for the index view
         $this->templateParams->builder = $this->buildGrid();
-        $this->templateParams->model = $this->createModel();
+        $this->templateParams->model = $this->getModelByAction('index');
 
         // Create title and breadcrumbs for the index page
         $this->createIndexTitle();
@@ -398,7 +398,7 @@ abstract class CrudController extends BaseController
 
     public function getModelByAction($action)
     {
-        return 'create' == $action? $this->createModel() : $this->findModel();
+        return in_array($action, ['create', 'index'])? $this->createModel() : $this->findModel();
     }
 
     /**
