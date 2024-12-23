@@ -27,6 +27,18 @@ class FormBuilder extends Base
     public $removeSortField = true;
     public $removeParentField = true;
 
+    public $hideWhenCreating = [];
+
+    public $hideWhenUpdating = [];
+
+    public $onlyWhenCreating = [];
+
+    public $onlyWhenUpdating = [];
+
+    public $readyOnlyWhenCreating = [];
+
+    public $readyOnlyWhenUpdating = [];
+
     public $addFieldsAfter = [];
 
     public $fieldHint = [];
@@ -97,6 +109,8 @@ class FormBuilder extends Base
 
         $this->beforeBuild();
 
+        $this->readOnlyOn($model);
+
         $allows = $model->activeAttributes();
         foreach ($this->fieldTypes as $attr => $type) {
             if ('static' == $type || 'staticControl' == $type) {
@@ -148,6 +162,8 @@ class FormBuilder extends Base
             }
         }
 
+        $this->hideOn($model);
+
         foreach ($this->fields as $field) {
             $type = $this->getType($field, $model);
             if (!$type) {
@@ -188,6 +204,38 @@ class FormBuilder extends Base
 
         $model->load($data);
         return $model->save();
+    }
+
+    protected function readOnlyOn($model)
+    {
+        if (!is_a($model, ActiveRecord::class)) {
+            return;
+        }
+
+        /* @var $model ActiveRecord */
+        if ($this->readyOnlyWhenCreating && $model->isNewRecord) {
+            $this->readyOnlyFields = array_merge($this->readyOnlyFields, $this->readyOnlyWhenCreating);
+        }
+
+        if ($this->readyOnlyWhenUpdating && !$model->isNewRecord) {
+            $this->readyOnlyFields = array_merge($this->readyOnlyFields, $this->readyOnlyWhenUpdating);
+        }
+    }
+
+    protected function hideOn($model)
+    {
+        if (!is_a($model, ActiveRecord::class)) {
+            return;
+        }
+
+        /* @var $model ActiveRecord */
+        if ($this->hideWhenCreating && $model->isNewRecord) {
+            $this->fields = array_diff($this->fields, $this->hideWhenCreating);
+        }
+
+        if ($this->hideWhenUpdating && !$model->isNewRecord) {
+            $this->fields = array_diff($this->fields, $this->hideWhenUpdating);
+        }
     }
 
     protected function initEnumOptions($model, $attr)
