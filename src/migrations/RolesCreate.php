@@ -17,12 +17,19 @@ class RolesCreate extends \yii\db\Migration
     {
         $auth = Yii::$app->authManager;
 
+        $allRoles = array_keys($auth->getRoles());
+
         foreach ($this->role2description as $role => $description) {
+            if (in_array($role, $allRoles)) {
+                continue;
+            }
+
             $roleObject = $auth->createRole($role);
             $roleObject->description = $description;
             $auth->add($roleObject);
-
             unset($roleObject);
+
+            echo "Добавлена роль '{$role}' с описанием '{$description}'\n";
         }
 
         return true;
