@@ -10,6 +10,8 @@ use Crud\behaviors\BackUrlBehavior;
 use Crud\helpers\ClassI18N;
 use Crud\helpers\Lang;
 use Crud\helpers\Html;
+use Crud\models\ClassType;
+use Crud\models\tree_node\ActiveRecord as TreeActiveRecord;
 
 use ReflectionClass;
 
@@ -63,6 +65,8 @@ implements CopyMessageCategoryInterface
     public $disabled;
 
     public $options = [];
+
+    const TYPE_PARAM = 'type';
 
     protected $id;
 
@@ -212,6 +216,11 @@ implements CopyMessageCategoryInterface
     protected function processingGet()
     {
         $get = Yii::$app->request->get();
+
+        if ($this->modelClass && is_a($this->modelClass, TreeActiveRecord::class, true)) {
+            $get[self::TYPE_PARAM] = ClassType::getTypeByClass($this->modelClass);
+        }
+
         foreach ((array) $this->params as $param => $value) {
             $get[$param] = $value;
         }
