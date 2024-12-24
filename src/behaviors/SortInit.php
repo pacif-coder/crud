@@ -22,6 +22,11 @@ class SortInit extends \yii\base\Behavior
         ];
     }
 
+    /**
+     * If the object does not have the 'sort' attribute value defined or if we
+     * have moved the object to another parent - put the object at the end
+     * of the list
+     */
     public function beforeSave(ModelEvent $event)
     {
         if (!$event->isValid) {
@@ -42,17 +47,36 @@ class SortInit extends \yii\base\Behavior
             return;
         }
 
-        if ($this->owner->{$sortAttr}) {
+        $parentAttr = ParentModel::getParentModelAttr($this->owner);
+        if ($this->owner->{$sortAttr} && !$this->isParentChange($parentAttr)) {
             return;
         }
 
         $query = $class::find();
-        $parentAttr = ParentModel::getParentModelAttr($this->owner);
         if ($parentAttr) {
             $where = [$parentAttr => $this->owner->{$parentAttr}];
             $query->where($where);
         }
 
         $this->owner->{$sortAttr} = $query->max($sortAttr) + 1;
+    }
+
+    /**
+     * Is the object changed parent object?
+     *
+     * @param type $parentAttr
+     * @return bool
+     */
+    protected function isParentChange($parentAttr)
+    {
+        if (!$parentAttr) {
+            return false;
+        }
+
+        if (!is_a($this->owner, ActiveRecord::class)) {
+            return false;
+        }
+
+        return $this->owner->getOldAttribute($parentAttr) != $this->owner->getAttribute($parentAttr);
     }
 }
