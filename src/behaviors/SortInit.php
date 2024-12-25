@@ -64,7 +64,7 @@ class SortInit extends \yii\base\Behavior
     /**
      * Is the object changed parent object?
      *
-     * @param type $parentAttr
+     * @param string $parentAttr
      * @return bool
      */
     protected function isParentChange($parentAttr)
@@ -74,6 +74,11 @@ class SortInit extends \yii\base\Behavior
         }
 
         if (!is_a($this->owner, ActiveRecord::class)) {
+            return false;
+        }
+
+        // this is a new object - the parent object is not changed 
+        if ($this->owner->isNewRecord) {
             return false;
         }
 
