@@ -37,15 +37,6 @@ form {
         white-space: pre-wrap;
     }
 
-    .error-summary ul {
-        margin: 0;
-        padding: 0;
-
-        li {
-            list-style: none;
-        }
-    }
-
     fieldset legend {
         border-bottom: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
         margin-top: 1em;
@@ -64,6 +55,16 @@ form {
 
     .high textarea {
         min-height: 500px;
+    }
+}
+
+/* errors summary can be usefull outsite form tag */
+.error-summary ul {
+    margin: 0;
+    padding: 0;
+
+    li {
+        list-style: none;
     }
 }
 
