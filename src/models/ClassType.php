@@ -1,6 +1,7 @@
 <?php
 namespace Crud\models;
 
+use Yii;
 use yii\web\NotFoundHttpException;
 
 /**
@@ -24,6 +25,8 @@ implements \Crud\models\ModelWithNameAttrInterface
     protected static $folderTypes;
 
     protected static $type2name;
+
+    protected static $keys = ['type2class', 'type2code', 'folderTypes', 'type2name'];
 
     public static function getTypeByClass($objectOrClass, $exception404 = true)
     {
@@ -106,6 +109,19 @@ implements \Crud\models\ModelWithNameAttrInterface
             return;
         }
 
+        $cache = Yii::$app->cache;
+
+        // check if the key exists in the cache
+        if ($cache->exists(self::class)) {
+            $data = $cache->get(self::class);
+
+            foreach (self::$keys as $key) {
+                self::$$key = $data[$key];
+            }
+
+            return;
+        }
+
         self::$type2class = self::$folderTypes = [];
         self::$type2name = self::$type2code = [];
 
@@ -125,6 +141,33 @@ implements \Crud\models\ModelWithNameAttrInterface
                 self::$type2code[$type->id] = $type->code;
             }
         }
+
+        // save the obtained data to cache
+        $data = [];
+        foreach (self::$keys as $key) {
+            $data[$key] = self::$$key;
+        }
+        $cache->set(self::class, $data, 86400);
+    }
+
+    public function afterDelete()
+    {
+        parent::afterDelete();
+
+        self::dropCache();
+    }
+
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        self::dropCache();
+    }
+
+    public static function dropCache()
+    {
+        $cache = Yii::$app->cache;
+        $cache->delete(self::class);
     }
 
     /**
