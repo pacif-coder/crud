@@ -91,7 +91,7 @@ abstract class BaseController extends \yii\web\Controller
             $view->registerAssetBundle($this->defaultAsset);
         }
 
-        foreach ($this->assets as $asset) {
+        foreach ((array) $this->assets as $asset) {
             $view->registerAssetBundle($asset);
         }
     }
