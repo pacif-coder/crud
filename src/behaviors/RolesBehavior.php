@@ -18,7 +18,11 @@ class RolesBehavior extends \yii\base\Behavior
 
     protected $_oldRoles;
 
-    protected static $userIdsByRole = [];
+    protected static $allRoles;
+
+    protected static $role2user;
+
+    protected static $user2role;
 
     public function events()
     {
@@ -54,9 +58,12 @@ class RolesBehavior extends \yii\base\Behavior
             return $this->_roles;
         }
 
-        $auth = Yii::$app->authManager;
-        $roles = $auth->getRolesByUser($this->getOwnerId());
-        return $this->_oldRoles = $this->_roles = array_keys($roles);
+        foreach (array_keys($this->_getAllRoles()) as $role) {
+            self::fillRole($role);
+        }
+
+        $roles = self::$user2role[$this->getOwnerId()]?? [];
+        return $this->_oldRoles = $this->_roles = $roles;
     }
 
     protected function _saveRoles()
@@ -88,13 +95,18 @@ class RolesBehavior extends \yii\base\Behavior
         $this->_oldRoles = $this->_roles;
 
         //  drop cash
-        static::$userIdsByRole = [];
+        self::$role2user = self::$user2role = null;
     }
 
     protected function _getAllRoles()
     {
-        $auth = Yii::$app->authManager;
-        return ArrayHelper::map($auth->getRoles(), 'name', 'description');
+        if (null !== self::$allRoles) {
+            return self::$allRoles;
+        }
+
+        $roles = Yii::$app->authManager->getRoles();
+        self::$allRoles = ArrayHelper::map($roles, 'name', 'description');
+        return self::$allRoles;
     }
 
     protected function _check($attr, $params = null)
@@ -145,11 +157,29 @@ class RolesBehavior extends \yii\base\Behavior
 
     public static function getUserIDsByRole($role)
     {
-        if (isset(static::$userIdsByRole[$role])) {
-            return static::$userIdsByRole[$role];
+        if (null === self::$role2user || !isset(self::$role2user[$role])) {
+            self::fillRole($role);
+        }
+
+        return self::$role2user[$role];
+    }
+
+    protected static function fillRole($role)
+    {
+        if (null !== self::$role2user && isset(self::$role2user[$role])) {
+            return;
+        }
+
+        if (null === self::$role2user) {
+            self::$role2user = self::$user2role = [];
         }
 
         $auth = Yii::$app->authManager;
-        return static::$userIdsByRole[$role] = $auth->getUserIdsByRole($role);
+
+        self::$role2user[$role] = [];
+        foreach ($auth->getUserIdsByRole($role) as $user) {
+            self::$role2user[$role][] = $user;
+            self::$user2role[$user][] = $role;
+        }
     }
 }
