@@ -6,6 +6,8 @@ use yii\base\Model;
 
 use Crud\helpers\Html;
 
+use Closure;
+
 /**
  *
  *
@@ -74,13 +76,10 @@ class DataColumn extends \yii\grid\DataColumn
 
     public function renderDataCell($model, $key, $index)
     {
-        if (is_callable($this->contentOptions) || $this->contentOptions instanceof Closure) {
-            $options = call_user_func($this->contentOptions, $model, $key, $index, $this);
-        } else {
-            $options = $this->contentOptions;
-        }
+        $content = $this->renderDataCellContent($model, $key, $index);
+        $contentOptions = $this->getContentOptions($model, $key, $index);
 
-        return Html::tag('td', $this->renderDataCellContent($model, $key, $index), $options);
+        return Html::tag('td', $content, $contentOptions);
     }
 
     protected function renderDataCellContent($model, $key, $index)
@@ -88,5 +87,14 @@ class DataColumn extends \yii\grid\DataColumn
         $str = parent::renderDataCellContent($model, $key, $index);
 
         return $this->truncateContent($str);
+    }
+
+    protected function getContentOptions($model, $key, $index)
+    {
+        if (is_callable($this->contentOptions) || $this->contentOptions instanceof Closure) {
+            return call_user_func($this->contentOptions, $model, $key, $index, $this);
+        }
+
+        return $this->contentOptions;
     }
 }
