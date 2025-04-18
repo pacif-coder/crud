@@ -7,10 +7,11 @@ use yii\db\ActiveQuery;
 use Crud\helpers\ChildeClass;
 use Crud\helpers\ParentModel;
 use Crud\models\tree_node\Folder;
-use Crud\models\tree_node\Type;
+use Crud\models\ClassType;
 use Crud\models\ModelWithOrderInterface;
-use Crud\models\ModelWithParentInterface;
 use Crud\models\tree_node\ActiveRecord;
+
+use Exception;
 
 class TreeLoader extends \yii\base\BaseObject
 {
@@ -27,6 +28,8 @@ class TreeLoader extends \yii\base\BaseObject
     public $class2with = [];
 
     public $class2limit = [];
+
+    public $class2where = [];
 
     /* @var ActiveQuery */
     protected $query;
@@ -107,7 +110,7 @@ class TreeLoader extends \yii\base\BaseObject
                 $this->nextID2realID[$nextID] = $realID;
                 $this->nextID2class[$nextID] = $class;
 
-                $parentAttr = ParentModel::getParentModelAttr($class, false);
+                $parentAttr = ParentModel::getParentModelAttr($class);
                 if ($parentAttr) {
                     $parentID = $model->{$parentAttr};
                     $this->classParentID2nextID[$class][$parentID][$realID] = $nextID;
@@ -138,13 +141,17 @@ class TreeLoader extends \yii\base\BaseObject
             $this->query->orderBy($orderAttrs);
         }
 
-        $parentAttr = ParentModel::getParentModelAttr($class, false);
+        $parentAttr = ParentModel::getParentModelAttr($class);
         if ($parentID && $parentAttr) {
             $this->query->andWhere([$parentAttr => $parentID]);
         }
 
         if (isset($this->class2with[$class])) {
             $this->query->with($this->class2with[$class]);
+        }
+
+        if (isset($this->class2where[$class])) {
+            $this->query->andWhere($this->class2where[$class]);
         }
 
         if (!isset($this->class2limit[$class])) {
@@ -164,8 +171,8 @@ class TreeLoader extends \yii\base\BaseObject
 
     protected function addChilde($model, $class, $nextID)
     {
-        $type = Type::getTypeByClass($class);
-        if (!Type::isFolderByType($type)) {
+        $type = ClassType::getTypeByClass($class);
+        if (!ClassType::isFolderByType($type)) {
             return;
         }
 
@@ -190,24 +197,70 @@ class TreeLoader extends \yii\base\BaseObject
             return $obj;
         }
 
-        $with = $this->class2with[$class];
-        if (isset($model->{$with}) && $model->{$with}) {
-            $obj->{$with} = (object) $model->{$with}->toArray();
-        } else {
-            $obj->{$with} = null;
+        foreach ((array) $this->class2with[$class] as $with) {
+            $remainWith = explode('.', $with);
+            $withFirst = array_shift($remainWith);
+
+            $obj->{$withFirst} = $this->_tmp($model, $withFirst, $remainWith);
         }
 
         return $obj;
     }
 
+    protected function _tmp($model, $withFirst, $remainWith)
+    {
+        if (!isset($model->{$withFirst}) || !$model->{$withFirst}) {
+            return null;
+        }
+
+        if (!$model->{$withFirst}) {
+            return $model->{$withFirst};
+        }
+
+        if (!$remainWith) {
+            if (is_object($model->{$withFirst})) {
+                return (object) $model->{$withFirst}->toArray();
+            }
+
+            if (is_array($model->{$withFirst})) {
+                $list = [];
+                foreach ($model->{$withFirst} as $key => $subModel) {
+                    $list[$key] = $subModel->toArray();
+                }
+
+                return $list;
+            }
+        }
+
+        $withSecond = array_shift($remainWith);
+        if (is_object($model->{$withFirst})) {
+            $tmp = (object) $model->{$withFirst}->toArray();
+            $tmp->{$withSecond} = $this->_tmp($model->{$withFirst}, $withSecond, $remainWith);
+            return $tmp;
+        }
+
+        if (is_array($model->{$withFirst})) {
+            $list = [];
+
+            foreach ($model->{$withFirst} as $key => $subModel) {
+                $tmp = (object) $subModel->toArray();
+                $tmp->{$withSecond} = $this->_tmp($subModel, $withSecond, $remainWith);
+
+                $list[$key] = $tmp;
+            }
+
+            return $list;
+        }
+    }
+
     protected function convertParent(&$obj, $class, $nextID)
     {
-        if (!is_a($class, ModelWithParentInterface::class, true)) {
+        $parentAttr = ParentModel::getParentModelAttr($class);
+        if (!$parentAttr) {
             $this->noParentId[] = $nextID;
             return;
         }
 
-        $parentAttr = $class::PARENT_MODEL_ATTR;
         $parentID = $obj->{$parentAttr};
         if (!isset($this->childeClass2parentIDMap[$class][$parentID])) {
             return;
@@ -226,15 +279,6 @@ class TreeLoader extends \yii\base\BaseObject
         }
 
         return $nodes;
-    }
-
-    public function getIDsByModel($model)
-    {
-        if (null === $parent) {
-            return $this->noParentId;
-        }
-
-        return $this->parent2id[$parent]?? [];
     }
 
     public function getIDsByParent($parent)
